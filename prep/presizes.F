@@ -4,8 +4,8 @@
       ! vjp 10/6/2006
 
       type MemoryDescript_t
-        integer           :: highmem
-        integer           :: currmem
+        integer*8           :: highmem
+        integer*8           :: currmem
       end type MemoryDescript_t
 
       type (MemoryDescript_t),save :: mem_descript
