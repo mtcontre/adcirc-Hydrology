@@ -121,6 +121,10 @@ Casey 100205: Add a variable for writing of SWAN hot-start files.
       USE SPONGELAYER, ONLY: LoadAbsLayerSigma, sponge_dis_mthd, sponge_opsplit0,
      &     adjust_sponge_sigma, getabslayerext, sponge_shift_soln
 
+#ifdef CMASSCHECK
+      USE MASSCHECK,   ONLY: computeMassConservError
+#endif
+
       IMPLICIT NONE
       INTEGER, intent(in) :: IT
 C
@@ -1150,6 +1154,12 @@ C...  SAVE THE CURRENT TIME LEVEL OF BARRIER INTO THE PREVIOUS TIME LEVEL
         BARLANHT1(:)=BARLANHT2(:)
       ENDIF  
 
+#ifdef CMASSCHECK
+C...
+C...  Compute element-wise mass conservation errors
+C...
+      call computeMassConservError()
+#endif
 C...
 c...  find and print to unit 6, the maximum elevation, the maximum
 c...  velocity and the node numbers at which they occur on myproc=0 if
