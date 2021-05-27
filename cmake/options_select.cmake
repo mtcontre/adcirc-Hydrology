@@ -202,3 +202,7 @@ mark_as_advanced(VECTOR_COMPUTER)
 option(ADCIRC_NOF2008
        "The fortran compiler being used does not have F2008 intrinsics" OFF)
 mark_as_advanced(ADCIRC_NOF2008)
+
+option(ENABLE_MASSCHECK
+       "Turn on element-wise mass conservation error monitoring and output" OFF)
+mark_as_advanced(ENABLE_MASSCHECK)

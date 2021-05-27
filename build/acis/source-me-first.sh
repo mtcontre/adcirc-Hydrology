@@ -1,6 +1,7 @@
 #!/usr/bin/bash
 
 ## Load modules
+module purge
 module load intelc/18.0.0
 module load intelfort/18.0.0
 MODULEPATH=$MODULEPATH:/projects/acis/modules/modulefiles
