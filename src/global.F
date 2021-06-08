@@ -176,6 +176,11 @@ C     for writing fulldomain hotstart files.
       REAL(SZ), ALLOCATABLE, TARGET      :: SWAN_TM02MaxOut_g(:)
       REAL(SZ), ALLOCATABLE, TARGET      :: SWAN_TMM10MaxOut_g(:)
 #endif
+
+#if defined CMASSCHECK
+      ! Global MASSCHECK variables
+      
+#endif
       
       ! mappings from subdomain to fulldomain for stations
       integer,allocatable,target :: imap_stae_lg(:)
