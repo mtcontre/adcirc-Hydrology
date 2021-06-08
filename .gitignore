@@ -39,4 +39,4 @@ CMakeCache.txt
 cmake_install.cmake
 ##sb adds emacs backup file
 *~
-
+.vscode
