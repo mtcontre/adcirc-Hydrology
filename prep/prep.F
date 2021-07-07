@@ -7678,6 +7678,13 @@ Cobell 20120510: SWAN Output Data
       type(OutputDataDescript_t), SAVE :: SwanTM02MaxDescript
       type(OutputDataDescript_t), SAVE :: SwanTMM10MaxDescript
 #endif
+#ifdef CMASSCHECK
+      type(OutputDataDescript_t), SAVE :: errMassSumDescript
+      type(OutputDataDescript_t), SAVE :: errMassMaxDescript
+      type(OutputDataDescript_t), SAVE :: errMassSumFullDescript
+      type(OutputDataDescript_t), SAVE :: errMassMaxFullDescript
+#endif
+
 C     3D output data
       type(OutputDataDescript_t), save :: SigTStaDescript    ! fort.41
       type(OutputDataDescript_t), save :: SalStaDescript
@@ -8439,6 +8446,65 @@ C........Mean Wave Period (TMM10)
       call makeFileName(SwanTMM10MaxDescript)
 
 #endif
+#ifdef CMASSCHECK
+      ! Local mass conservation error indicators
+      ! errmasssum.63
+      errMassSumDescript % specifier            = NOUTGE
+      errMassSumDescript % lun                  = 500
+      errMassSumDescript % initial_value        = 0.0
+      errMassSumDescript % num_items_per_record = 1
+      errMassSumDescript % num_fd_records       = MNP
+      errMassSumDescript % num_records_this     = MNP
+      errMassSumDescript % ConsiderWetDry       = .false.
+      errMassSumDescript % alternate_value      = -99999.0
+      errMassSumDescript % field_name           = 'ErrMassSum'
+      errMassSumDescript % file_extension       = 63
+      errMassSumDescript % file_basename        = 'errmasssum'
+      errMassSumDescript % readMaxMin           = .false.
+      call makeFileName(errMassSumDescript)
+      ! errmassmax.63
+      errMassMaxDescript % specifier            = NOUTGE
+      errMassMaxDescript % lun                  = 501
+      errMassMaxDescript % initial_value        = 0.0
+      errMassMaxDescript % num_items_per_record = 1
+      errMassMaxDescript % num_fd_records       = MNP
+      errMassMaxDescript % num_records_this     = MNP
+      errMassMaxDescript % ConsiderWetDry       = .false.
+      errMassMaxDescript % alternate_value      = -99999.0
+      errMassMaxDescript % field_name           = 'ErrMassMax'
+      errMassMaxDescript % file_extension       = 63
+      errMassMaxDescript % file_basename        = 'errmassmax'
+      errMassMaxDescript % readMaxMin           = .false.
+      call makeFileName(errMassMaxDescript)
+      ! errmasssumfull.63
+      errMassSumFullDescript % specifier            = NOUTGE
+      errMassSumFullDescript % lun                  = 502
+      errMassSumFullDescript % initial_value        = 0.0
+      errMassSumFullDescript % num_items_per_record = 1
+      errMassSumFullDescript % num_fd_records       = MNP
+      errMassSumFullDescript % num_records_this     = MNP
+      errMassSumFullDescript % ConsiderWetDry       = .false.
+      errMassSumFullDescript % alternate_value      = -99999.0
+      errMassSumFullDescript % field_name           = 'ErrMassSum'
+      errMassSumFullDescript % file_extension       = 63
+      errMassSumFullDescript % file_basename        = 'errmasssumfull'
+      errMassSumFullDescript % readMaxMin           = .false.
+      call makeFileName(errMassSumFullDescript)
+      ! errmassmaxfull.63
+      errMassMaxFullDescript % specifier            = NOUTGE
+      errMassMaxFullDescript % lun                  = 503
+      errMassMaxFullDescript % initial_value        = 0.0
+      errMassMaxFullDescript % num_items_per_record = 1
+      errMassMaxFullDescript % num_fd_records       = MNP
+      errMassMaxFullDescript % num_records_this     = MNP
+      errMassMaxFullDescript % ConsiderWetDry       = .false.
+      errMassMaxFullDescript % alternate_value      = -99999.0
+      errMassMaxFullDescript % field_name           = 'ErrMassMax'
+      errMassMaxFullDescript % file_extension       = 63
+      errMassMaxFullDescript % file_basename        = 'errmassmaxfull'
+      errMassMaxFullDescript % readMaxMin           = .false.
+      call makeFileName(errMassMaxFullDescript)
+#endif
 C     3D data
 C     fort.41
       SigTStaDescript % specifier            = I3DSD
@@ -8880,6 +8946,12 @@ C     was specified.
             CALL initNetCDFOutputFile(SwanTMM10MaxDescript,reterr)
         ENDIF
       ENDIF
+#endif
+#ifdef CMASSCHECK
+      CALL initNetCDFOutputFile(errMassSumDescript,reterr)
+      CALL initNetCDFOutputFile(errMassMaxDescript,reterr)
+      CALL initNetCDFOutputFile(errMassSumFullDescript,reterr)
+      CALL initNetCDFOutputFile(errMassMaxFullDescript,reterr)
 #endif
 C
       IF (C3D.eqv..true.) THEN

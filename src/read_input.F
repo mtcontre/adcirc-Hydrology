@@ -69,6 +69,9 @@ C-----------------------------------------------------------------------
      &    SWAN_OutputTM01, SWAN_OutputTPS, SWAN_OutputWIND,
      &    SWAN_OutputTM02, SWAN_OutputTMM10
 #endif
+#ifdef CMASSCHECK
+!      USE MASSCHECK, ONLY : initMassCheck
+#endif
 #ifdef DATETIME
      &   ,basedatetime
 #endif
@@ -295,6 +298,10 @@ C     ALLOCATE ARRAYS Dimensioned by MNP and MNE
       ! mnvel
       call alloc_main3()
 
+#ifdef CMASSCHECK
+      ! Allocate MassCheck module variables
+!      call initMassCheck()
+#endif
 C...
 C...  OPEN UNIT 15 INPUT FILE (control parameters and periodic boundary conditions)
 C...
@@ -4117,6 +4124,13 @@ C...  CHECK INPUT PARAMETER NOUTGE
          CASE DEFAULT
             ! do nothing, the other cases handled below
       END SELECT
+
+#ifdef CMASSCHECK
+      IF(NOUTGE.NE.-5) THEN
+         CALL allMessage(ERROR,'NOUGE must be -5 for mass check function.')
+         CALL EXIT(1)
+      ENDIF
+#endif
 
 C...  IF GLOBAL ELEVATION OUTPUT WILL BE GENERATED
 

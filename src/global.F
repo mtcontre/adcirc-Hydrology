@@ -177,11 +177,6 @@ C     for writing fulldomain hotstart files.
       REAL(SZ), ALLOCATABLE, TARGET      :: SWAN_TMM10MaxOut_g(:)
 #endif
 
-#if defined CMASSCHECK
-      ! Global MASSCHECK variables
-      
-#endif
-      
       ! mappings from subdomain to fulldomain for stations
       integer,allocatable,target :: imap_stae_lg(:)
       integer,allocatable,target :: imap_stav_lg(:)
@@ -548,6 +543,10 @@ Corbitt 120322: Create Elemental Versions of IFNLCAT and IFNLCT
       ! jgf: added support for water level offset
       integer, target :: dynamicWaterLevelCorrectionFilePos
       integer, target :: dynamicWaterLevelCorrectionStaFilePos
+#ifdef CMASSCHECK
+      integer, target :: errMassSumFilePos
+      integer, target :: errMassMaxFilePos
+#endif
 
       INTEGER  IHOTSTP, IMHS
       INTEGER  ITIME, ITEMPSTP
@@ -577,7 +576,11 @@ Casey 090302: Added a variable for output of radiation stress gradients.
       integer, target :: windDragSpoolCounter
       integer, target :: dynamicWaterLevelCorrectionSpoolCounter
       integer, target :: dynamicWaterLevelCorrectionStaSpoolCounter
-      
+#ifdef CMASSCHECK
+      integer, target :: errMassSumSpoolCounter
+      integer, target :: errMassMaxSpoolCounter
+#endif
+
       INTEGER :: NSPOOLC, NSPOOLGC, NSPOOLGE ! output increments
       INTEGER :: NSPOOLGV, NSPOOLGW, NSPOOLM, NSPOOL_TVW ! output increments
       INTEGER  NSTAC, NSTAM, NTCYFC, NTCYFGC, NTCYFGE

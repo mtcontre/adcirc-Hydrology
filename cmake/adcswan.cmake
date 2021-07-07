@@ -103,6 +103,7 @@ if(BUILD_ADCSWAN AND PERL_FOUND)
       ${CMAKE_SOURCE_DIR}/src/couple2swan.F
       ${CMAKE_SOURCE_DIR}/src/sponge_layer.F
       ${CMAKE_SOURCE_DIR}/src/quadrature.F
+      ${CMAKE_SOURCE_DIR}/src/masscheck.F
       ${CMAKE_SOURCE_DIR}/src/couple2baroclinic3D.F)
 
   set(ADCSWAN_SOURCES

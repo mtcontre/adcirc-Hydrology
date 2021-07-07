@@ -20,8 +20,12 @@ C----------------------------------------------------------------------
       !
       !    2 D   D A T A
       !
-#ifdef CSWAN
+#if defined(CSWAN) && defined(CMASSCHECK)
+      integer, parameter :: numOutputDescript2D = 52
+#elif defined(CSWAN) && !defined(CMASSCHECK)
       integer, parameter :: numOutputDescript2D = 48
+#elif !defined(CSWAN) && defined(CMASSCHECK)
+      integer, parameter :: numOutputDescript2D = 38
 #else
       integer, parameter :: numOutputDescript2D = 34
 #endif
@@ -105,7 +109,7 @@ C     jgf48.03 Full domain arrays used when writing globalio output.
       real(sz), allocatable, target :: windDragOut_g(:)
       ! jgf: Added support for water level offset
       real(sz), allocatable, target :: dynamicWaterLevelCorrection2_g(:)
-      real(sz), allocatable, target :: dynamicWaterLevelCorrectionSta_g(:)
+      real(sz), allocatable, target::dynamicWaterLevelCorrectionSta_g(:)
       !
       !  H A R M O N I C   A N A L Y S I S   D A T A
       !
@@ -299,6 +303,34 @@ C
       real(sz), allocatable, target :: everDried_g(:)
       real(sz), allocatable, target :: everDried_time_g(:)
       type(OutputDataDescript_t), target :: everDriedDescript
+      !
+      !   M A S S   E R R O R   O U T P U T   D A T A
+      !
+      !  + errMassSum: Accumulated errors observed for each for.63 output period
+      !  + errMassMax: Signed maximum errors observed for each for.63 output period
+      !  + errMassSumFull: Accumulated errors observed for an entire simulation lifetime
+      !  + errMassMaxFull: Signed maximum errors observed for an entire simulation lifetime
+#ifdef CMASSCHECK
+      type(OutputDataDescript_t), SAVE, TARGET :: errMassSumDescript
+      type(OutputDataDescript_t), SAVE, TARGET :: errMassMaxDescript
+      type(OutputDataDescript_t), SAVE, TARGET :: errMassSumFullDescript
+      type(OutputDataDescript_t), SAVE, TARGET :: errMassMaxFullDescript
+      !
+      ! Global element-wise nodal mass conservation error variables
+      REAL(SZ), ALLOCATABLE, TARGET :: errMassSum(:)
+      REAL(SZ), ALLOCATABLE, TARGET :: errMassMax(:)
+      REAL(SZ), ALLOCATABLE, TARGET :: errMassMax_time(:)
+      REAL(SZ), ALLOCATABLE, TARGET :: errMassSumFull(:)
+      REAL(SZ), ALLOCATABLE, TARGET :: errMassMaxFull(:)
+      REAL(SZ), ALLOCATABLE, TARGET :: errMassMaxFull_time(:)
+      !
+      REAL(SZ), ALLOCATABLE, TARGET :: errMassSum_g(:)
+      REAL(SZ), ALLOCATABLE, TARGET :: errMassMax_g(:)
+      REAL(SZ), ALLOCATABLE, TARGET :: errMassMax_time_g(:)
+      REAL(SZ), ALLOCATABLE, TARGET :: errMassSumFull_g(:)
+      REAL(SZ), ALLOCATABLE, TARGET :: errMassMaxFull_g(:)
+      REAL(SZ), ALLOCATABLE, TARGET :: errMassMaxFull_time_g(:)
+#endif
 
       ! jgf52.05: Set via fort.15 namelist in read_input.F.
       logical :: outputNodeCode = .false.
@@ -355,6 +387,10 @@ C----------------------------------------------------------------------
      &   usingdynamicWaterLevelCorrection, dynamicWaterLevelCorrectionStaSpoolCounter, 
      &   dynamicWaterLevelCorrectionFilePos, dynamicWaterLevelCorrectionSta,
      &   dynamicWaterLevelCorrectionStaFilePos, PRBCKGRND
+#ifdef CMASSCHECK
+     &   , errMassSumSpoolCounter, errMassMaxSpoolCounter
+     &   , errMassSumFilePos, errMassMaxFilePos
+#endif
 
       USE MESH, ONLY : NP, NE, DP, NM, ICS, labels
       USE NodalAttributes, ONLY : OutputTau0, Tau0Var, LoadEleSlopeLim,
@@ -425,24 +461,50 @@ C
       ptr(33)%descript2D => dynamicWaterLevelCorrectionDescript
       ptr(34)%descript2D => dynamicWaterLevelCorrectionStaDescript
 
+      i = 34
 !... For SWAN, there are additional output arrays
 #ifdef CSWAN
-      ptr(35)%descript2D => SwanHSDescript 
-      ptr(36)%descript2D => SwanHSMaxDescript
-      ptr(37)%descript2D => SwanDIRDescript
-      ptr(38)%descript2D => SwanDIRMaxDescript
-      ptr(39)%descript2D => SwanTM01Descript
-      ptr(40)%descript2D => SwanTM01MaxDescript
-      ptr(41)%descript2D => SwanTPSDescript
-      ptr(42)%descript2D => SwanTPSMaxDescript
-      ptr(43)%descript2D => SwanWindDescript
-      ptr(44)%descript2D => SwanWindMaxDescript
-      ptr(45)%descript2D => SwanTM02Descript
-      ptr(46)%descript2D => SwanTM02MaxDescript
-      ptr(47)%descript2D => SwanTMM10Descript
-      ptr(48)%descript2D => SwanTMM10MaxDescript
+      i = i + 1
+      ptr(i)%descript2D => SwanHSDescript 
+      i = i + 1
+      ptr(i)%descript2D => SwanHSMaxDescript
+      i = i + 1
+      ptr(i)%descript2D => SwanDIRDescript
+      i = i + 1
+      ptr(i)%descript2D => SwanDIRMaxDescript
+      i = i + 1
+      ptr(i)%descript2D => SwanTM01Descript
+      i = i + 1
+      ptr(i)%descript2D => SwanTM01MaxDescript
+      i = i + 1
+      ptr(i)%descript2D => SwanTPSDescript
+      i = i + 1
+      ptr(i)%descript2D => SwanTPSMaxDescript
+      i = i + 1
+      ptr(i)%descript2D => SwanWindDescript
+      i = i + 1
+      ptr(i)%descript2D => SwanWindMaxDescript
+      i = i + 1
+      ptr(i)%descript2D => SwanTM02Descript
+      i = i + 1
+      ptr(i)%descript2D => SwanTM02MaxDescript
+      i = i + 1
+      ptr(i)%descript2D => SwanTMM10Descript
+      i = i + 1
+      ptr(i)%descript2D => SwanTMM10MaxDescript
 #endif
 
+#ifdef CMASSCHECK
+      i = i + 1
+      ptr(i)%descript2D => errMassSumDescript 
+      i = i + 1
+      ptr(i)%descript2D => errMassMaxDescript 
+      i = i + 1
+      ptr(i)%descript2D => errMassSumFullDescript 
+      i = i + 1
+      ptr(i)%descript2D => errMassMaxFullDescript 
+#endif
+      
       ! jgf51.21.24: Set some defaults
       do i=1,numOutputDescript2D
          ptr(i) % descript2D % specifier = OFF
@@ -1330,6 +1392,10 @@ C     maxrs.63
 #ifdef CSWAN
       CALL initSwanOutput() !...couple2swan.F --> performs same process as above
 #endif
+
+#ifdef CMASSCHECK
+      CALL initMassCheckOutput()
+#endif
       !
       ! create file names
       do i=1, numOutputDescript2D
@@ -1477,7 +1543,8 @@ C     maxrs.63
                      if (myproc.eq.0) then
 C                      ! initialize it if it wasn't initialized above
                        if (ptr(i) % descript2D % initialized.eqv..false.) then
-                           call initNetCDFOutputFile(ptr(i) % descript2D, nerr)
+                           call initNetCDFOutputFile(ptr(i) % descript2D
+     &                      , nerr)
                            if (nerr.eqv..true.) then
                               call allMessage(ERROR,
      &                        "Failed to initialize "//
@@ -1671,19 +1738,26 @@ C       for all processors, not just myproc=0.
 C        OUTPUT THE SWAN MAXIMUM FILES
 #ifdef CSWAN
          IF(Swan_OutputHS)
-     &      CALL writeOutArrayMinMax(316,TimeLoc,IT,1,SwanHSMaxDescript,packOne,unpackOne)
+     &      CALL writeOutArrayMinMax(316,TimeLoc,IT,1,
+     &                               SwanHSMaxDescript,packOne,unpackOne)
          IF(Swan_OutputDIR)
-     &      CALL writeOutArrayMinMax(317,TimeLoc,IT,1,SwanDIRMaxDescript,packOne,unpackOne)
+     &      CALL writeOutArrayMinMax(317,TimeLoc,IT,1,
+     &                               SwanDIRMaxDescript,packOne,unpackOne)
          IF(Swan_OutputTM01)
-     &      CALL writeOutArrayMinMax(318,TimeLoc,IT,1,SwanTM01MaxDescript,packOne,unpackOne)
+     &      CALL writeOutArrayMinMax(318,TimeLoc,IT,1,
+     &                               SwanTM01MaxDescript,packOne,unpackOne)
          IF(Swan_OutputTM02)
-     &      CALL writeOutArrayMinMax(321,TimeLoc,IT,1,SwanTM02MaxDescript,packOne,unpackOne)
+     &      CALL writeOutArrayMinMax(321,TimeLoc,IT,1,
+     &                               SwanTM02MaxDescript,packOne,unpackOne)
          IF(Swan_OutputTMM10)
-     &      CALL writeOutArrayMinMax(322,TimeLoc,IT,1,SwanTMM10MaxDescript,packOne,unpackOne)
+     &      CALL writeOutArrayMinMax(322,TimeLoc,IT,1,
+     &                               SwanTMM10MaxDescript,packOne,unpackOne)
          IF(Swan_OutputTPS)
-     &      CALL writeOutArrayMinMax(319,TimeLoc,IT,1,SwanTPSMaxDescript,packOne,unpackOne)
+     &      CALL writeOutArrayMinMax(319,TimeLoc,IT,1,
+     &                               SwanTPSMaxDescript,packOne,unpackOne)
          IF(Swan_OutputWind)
-     &      CALL writeOutArrayMinMax(320,TimeLoc,IT,1,SwanWindMaxDescript,packTwo,unpackTwo)
+     &      CALL writeOutArrayMinMax(320,TimeLoc,IT,1,
+     &                               SwanWindMaxDescript,packTwo,unpackTwo)
 #endif
          ! Write the inundationtime.63, maxinundepth.63, everDried.63, and
          ! endrisinginun.63 files at the end of the simulation.
@@ -1698,6 +1772,16 @@ C        OUTPUT THE SWAN MAXIMUM FILES
      &         everDriedDescript, packTwo, unpackTwo)
          endif
 
+#ifdef CMASSCHECK
+         if (noutge.ne.0) then
+            CALL writeOutArrayMinMax(502, TimeLoc, IT, 1,
+     &                               errMassSumFullDescript,
+     &                               packOne, unpackOne)
+            CALL writeOutArrayMinMax(503, TimeLoc, IT, 2,
+     &                               errMassMaxFullDescript,
+     &                               packTwo, unpackTwo)
+         endif
+#endif
       ENDIF
 
 #if defined(WRITE_OUTPUT_TRACE) || defined(ALL_TRACE)
@@ -6009,6 +6093,134 @@ C-----------------------------------------------------------------------
 C-----------------------------------------------------------------------
       end subroutine initInundationOutput
 C-----------------------------------------------------------------------
+
+#ifdef CMASSCHECK
+C-----------------------------------------------------------------------
+C      S U B R O U T I N E   I N I T   M A S S   C H E C K   O U T P U T
+C-----------------------------------------------------------------------
+C     Initialize output variables and arrays for mass conservation
+C     error output.
+C-----------------------------------------------------------------------
+      subroutine initMassCheckOutput()
+C-----------------------------------------------------------------------
+      USE SIZES, ONLY : MNPROC, OFF, ASCII, BINARY, NETCDF3,
+     &                       NETCDF4, XDMF, MYPROC
+      USE GLOBAL
+      USE MESH
+      IMPLICIT NONE
+
+      call setMessageSource("initMassCheckOutput")
+#if defined(WRITE_OUTPUT_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Enter.")
+#endif
+
+      allocate(errMassSum(mnp))
+      allocate(errMassMax(mnp),errMassMax_time(mnp))
+      allocate(errMassSumFull(mnp))
+      allocate(errMassMaxFull(mnp),errMassMaxFull_time(mnp))
+
+      errMassSum(:) = 0.d0
+      errMassMax(:) = 0.d0
+      errMassMax_time(:) = 0.d0
+      errMassSumFull(:) = 0.d0
+      errMassMaxFull(:) = 0.d0
+      errMassMaxFull_time(:) = 0.d0
+      !
+      ! errmasssum.63
+      if ( mnproc.gt.1 ) then
+         allocate(errMassSum_g(np_g))
+         errMassSum_g(:) = 0.d0
+      ENDIF
+      errMassSumDescript % lun                     = 500
+      errMassSumDescript % specifier               = NOUTGE
+      errMassSumDescript % startTimeStep           = NTCYSGE
+      errMassSumDescript % endTimeStep             = NTCYFGE
+      errMassSumDescript % outputTimeStepIncrement = NSPOOLGE
+      errMassSumDescript % spoolCounter            => errMassSumSpoolCounter
+      errMassSumDescript % filepos                 => errMassSumFilePos
+      errMassSumDescript % array                   => errMassSum
+      errMassSumDescript % array_g                 => errMassSum_g
+      errMassSumDescript % ConsiderWetDry          = .false.
+      errMassSumDescript % field_name              = 'ErrMassSum'
+      errMassSumDescript % file_basename           = 'errmasssum'
+      errMassSumDescript % file_extension          = 63
+      errMassSumDescript % writeFlag               = .true.
+      errMassSumDescript % minmax_timestamp        = .false.
+      errMassSumDescript % readMaxMin              = .false.
+      !
+      ! errmassmax.63
+      if ( mnproc.gt.1 ) then
+         allocate(errMassMax_g(np_g))
+         allocate(errMassMax_time_g(NP_G))
+         errMassMax_g(:) = 0.d0
+         errMassMax_time_g(:) = 0.d0
+      ENDIF
+      errMassMaxDescript % lun                     = 501
+      errMassMaxDescript % specifier               = NOUTGE
+      errMassMaxDescript % num_items_per_record    = 2   !overloading this value to account for time stamps along with values
+      errMassMaxDescript % startTimeStep           = NTCYSGE
+      errMassMaxDescript % endTimeStep             = NTCYFGE
+      errMassMaxDescript % outputTimeStepIncrement = NSPOOLGE
+      errMassMaxDescript % spoolCounter            => errMassMaxSpoolCounter
+      errMassMaxDescript % filepos                 => errMassMaxFilePos
+      errMassMaxDescript % array           => errMassMax
+      errMassMaxDescript % array_g         => errMassMax_g
+      errMassMaxDescript % array2          => errMassMax_time
+      errMassMaxDescript % array2_g        => errMassMax_time_g
+      errMassMaxDescript % ConsiderWetDry          = .false.
+      errMassMaxDescript % field_name              = 'ErrMassMax'
+      errMassMaxDescript % file_basename           = 'errmassmax'
+      errMassMaxDescript % file_extension          = 63
+      errMassMaxDescript % writeFlag               = .true.
+      errMassMaxDescript % minmax_timestamp        = .true.
+      errMassMaxDescript % readMaxMin              = .false.
+      !
+      ! errmasssumfull.63
+      if ( mnproc.gt.1 ) then
+         allocate(errMassSumFull_g(np_g))
+         errMassSumFull_g(:) = 0.d0
+      ENDIF
+      errMassSumFullDescript % lun                     = 502
+      errMassSumFullDescript % specifier               = NOUTGE
+      errMassSumFullDescript % array           => errMassSumFull
+      errMassSumFullDescript % array_g         => errMassSumFull_g
+      errMassSumFullDescript % ConsiderWetDry          = .false.
+      errMassSumFullDescript % field_name      = 'ErrMassSum'
+      errMassSumFullDescript % file_basename   = 'errmasssumfull'
+      errMassSumFullDescript % file_extension          = 63
+      errMassSumFullDescript % writeFlag               = .false.
+      errMassSumFullDescript % minmax_timestamp        = .false.
+      errMassSumFullDescript % readMaxMin              = .false.
+      !
+      ! errmassmaxfull.63
+      if ( mnproc.gt.1 ) then
+         allocate(errMassMaxFull_g(np_g))
+         allocate(errMassMaxFull_time_g(NP_G))
+         errMassMaxFull_g(:) = 0.d0
+         errMassMaxFull_time_g(:) = 0.d0
+      ENDIF
+      errMassMaxFullDescript % lun                     = 503
+      errMassMaxFullDescript % specifier               = NOUTGE
+      errMassMaxFullDescript % num_items_per_record    = 2   !overloading this value to account for time stamps along with values
+      errMassMaxFullDescript % array           => errMassMaxFull
+      errMassMaxFullDescript % array_g         => errMassMaxFull_g
+      errMassMaxFullDescript % array2          => errMassMaxFull_time
+      errMassMaxFullDescript % array2_g        => errMassMaxFull_time_g
+      errMassMaxFullDescript % ConsiderWetDry          = .false.
+      errMassMaxFullDescript % field_name      = 'ErrMassMax'
+      errMassMaxFullDescript % file_basename   = 'errmassmaxfull'
+      errMassMaxFullDescript % file_extension          = 63
+      errMassMaxFullDescript % writeFlag               = .false.
+      errMassMaxFullDescript % minmax_timestamp        = .true.
+      errMassMaxFullDescript % readMaxMin              = .true.
+
+#if defined(WRITE_OUTPUT_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Return.")
+#endif
+C-----------------------------------------------------------------------
+      end subroutine initMassCheckOutput
+C-----------------------------------------------------------------------
+#endif
 
 C-----------------------------------------------------------------------
 C                     S U B R O U T I N E

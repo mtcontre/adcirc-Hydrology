@@ -117,6 +117,11 @@ Casey 090302: We need these values from other places.
 Casey 100205: Add a variable for writing of SWAN hot-start files.
      &                      ,WriteSwanHotStart
 #endif
+
+#ifdef CMASSCHECK
+      USE MASSCHECK, ONLY : computeMassConservError
+#endif
+
       USE WEIR_FLUX
       USE SPONGELAYER, ONLY: LoadAbsLayerSigma, sponge_dis_mthd, sponge_opsplit0,
      &     adjust_sponge_sigma, getabslayerext, sponge_shift_soln
@@ -389,8 +394,8 @@ C     TIP..Tidal potential forcing
       !
       ! jgf: shift water level offset values
       if (usingDynamicWaterLevelCorrection.eqv..true.) then
-         dynamicWaterLevelCorrection1(:) = dynamicWaterLevelCorrection2(:)
-         dynamicWaterLevelCorrection2(:) = 0.d0
+         dynamicWaterLevelCorrection1(:)=dynamicWaterLevelCorrection2(:)
+         dynamicWaterLevelCorrection2(:)=0.d0
       endif
 C
 C.............................DW, sponge layer ..................
@@ -1093,6 +1098,12 @@ C...  Collect maximum values of variables   v46.50 sb 11/11/2006
       if (inundationOutput.eqv..true.) then
          call collectInundationData(timeloc, it)
       endif
+#ifdef CMASSCHECK
+C...
+C...  Compute element-wise mass conservation errors
+C...
+      call computeMassConservError(timeLoc)
+#endif
 C
 C...
 C...  WRITE OUTPUT
@@ -1154,12 +1165,6 @@ C...  SAVE THE CURRENT TIME LEVEL OF BARRIER INTO THE PREVIOUS TIME LEVEL
         BARLANHT1(:)=BARLANHT2(:)
       ENDIF  
 
-#ifdef CMASSCHECK
-C...
-C...  Compute element-wise mass conservation errors
-C...
-      call computeMassConservError()
-#endif
 C...
 c...  find and print to unit 6, the maximum elevation, the maximum
 c...  velocity and the node numbers at which they occur on myproc=0 if

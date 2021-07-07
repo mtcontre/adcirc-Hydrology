@@ -100,6 +100,7 @@ if(BUILD_PADCSWAN AND PERL_FOUND)
       ${CMAKE_SOURCE_DIR}/src/subdomain.F
       ${CMAKE_SOURCE_DIR}/src/sponge_layer.F
       ${CMAKE_SOURCE_DIR}/src/quadrature.F
+      ${CMAKE_SOURCE_DIR}/src/masscheck.F
       ${CMAKE_SOURCE_DIR}/src/couple2baroclinic3D.F
       ${CMAKE_SOURCE_DIR}/src/wetdry.F
       ${CMAKE_SOURCE_DIR}/src/gwce.F

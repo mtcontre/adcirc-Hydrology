@@ -757,6 +757,14 @@ Casey 090302: Corrected the unit number from 10 to 90.
      &           TRIM(GLOBALDIR)//'/'//'fort.90',
      $           NP_G, NP, 'Tau0      ')
             ENDIF
+#ifdef CMASSCHECK
+            CALL OPEN_GBL_FILE(500, TRIM(LOCALDIR)//'/'//
+     &       'errmasssum.63',
+     &       NP_G, NP, HEADER63)
+            CALL OPEN_GBL_FILE(501, TRIM(LOCALDIR)//'/'//
+     &       'errmassmax.63',
+     &       NP_G, NP, HEADER63)
+#endif
          endif
          IGEP=2
       ENDIF

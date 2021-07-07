@@ -255,6 +255,12 @@ C
       type(nodalData), private, save :: sw_tm02_max   ! for swan_TM02_max.63
       type(nodalData), private, save :: sw_tmm10_max  ! for swan_TMM10_max.63
 #endif
+#ifdef CMASSCHECK
+       type(nodalData), private, save :: ndErrMassSum     ! for errMassSum
+       type(nodalData), private, save :: ndErrMassMax     ! for errMassSum
+       type(nodalData), private, save :: ndErrMassSumFull ! for errMassSum
+       type(nodalData), private, save :: ndErrMassMaxFull ! for errMassSum
+#endif
       type(nodalData), private, save :: density3D    ! for fort.44
       type(nodalData), private, save :: velocity3D   ! for fort.45
       type(nodalData), private, save :: turbulence3D ! for fort.46
@@ -518,6 +524,16 @@ C
             CALL initNodalDataFile(eRisInun, descript1, reterr)
          CASE(404)
             CALL initNodalDataFile(evrDry, descript1, reterr)
+#ifdef CMASSCHECK
+         CASE(500)
+            CALL initNodalDataFile(ndErrMassSum, descript1, reterr)
+         CASE(501)
+            CALL initNodalDataFile(ndErrMassMax, descript1, reterr)
+         CASE(502)
+            CALL initNodalDataFile(ndErrMassSumFull, descript1, reterr)
+         CASE(503)
+            CALL initNodalDataFile(ndErrMassMaxFull, descript1, reterr)
+#endif
          CASE(108)
             CALL initNodalDataFile(dynamiccorrection, descript1, reterr)
          CASE(109)
@@ -3527,6 +3543,181 @@ C
      &             '_FillValue', doubleval)
             CALL check_err(iret)
 
+#ifdef CMASSCHECK
+         !
+         ! errmasssum.63
+         CASE(500)
+            dat%varnames(1) = 'ErrMassSum'
+            dat%nodal_data_dims(1) = dat%myMesh%num_nodes_dim_id
+            dat%nodal_data_dims(2) = dat%myTime%timenc_dim_id
+            iret = nf90_def_var(dat%ncid,trim(dat%varnames(1)),
+     &          NF90_DOUBLE, dat%nodal_data_dims, dat%nodal_data_id)
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%nodal_data_id,
+     &          'long_name', 
+     &          'accumulated mass conservation error')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%nodal_data_id,
+     &          'standard_name', 'accumulated_mass_conservation_error')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%nodal_data_id,
+     &          'coordinates', 'time y x')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%nodal_data_id,
+     &          'location', 'node')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%nodal_data_id,
+     &          'mesh', 'adcirc_mesh')
+            CALL check_err(iret)
+            CALL putUnitsAttribute(dat%ncid, dat%nodal_data_id,
+     &          '-', '-')
+            iret = nf90_put_att(dat%ncid, dat%nodal_data_id,
+     &          '_FillValue', 0.d0)
+            CALL check_err(iret)
+         !
+         ! errmassmax.63
+         CASE(501)
+            dat%varnames(1) = 'ErrMassMax'
+            dat%varnames(2) = 'time_of_ErrMassMax'
+            dat%nodal_data_dims(1) = dat%myMesh%num_nodes_dim_id
+            dat%nodal_data_dims(2) = dat%myTime%timenc_dim_id
+            iret = nf90_def_var(dat%ncid,trim(dat%varnames(1)),
+     &        NF90_DOUBLE, dat%nodal_data_dims,
+     &        dat%max_nodal_data_id)
+            CALL check_err(iret)
+            iret = nf90_def_var(dat%ncid,trim(dat%varnames(2)),
+     &        NF90_DOUBLE, dat%nodal_data_dims,
+     &        dat%time_max_nodal_data_id)
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%max_nodal_data_id,
+     &        'long_name', 'maximum mass conservation error')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%time_max_nodal_data_id,
+     &        'long_name', 'time of maximum mass conservation error')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%max_nodal_data_id,
+     &        'standard_name', 
+     &        'maximum_mass_conservation_error')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%time_max_nodal_data_id,
+     &        'standard_name', 
+     &        'time_of_maximum_mass_conservation_error')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%max_nodal_data_id,
+     &        'coordinates', 'y x')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%time_max_nodal_data_id,
+     &        'coordinates', 'y x')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%max_nodal_data_id,
+     &        'location', 'node')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%time_max_nodal_data_id,
+     &        'location', 'node')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%max_nodal_data_id,
+     &        'mesh', 'adcirc_mesh')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%time_max_nodal_data_id,
+     &        'mesh', 'adcirc_mesh')
+            CALL check_err(iret)
+            CALL putUnitsAttribute(dat%ncid, dat%max_nodal_data_id,
+     &        '-', '-')
+            CALL putUnitsAttribute(dat%ncid, dat%time_max_nodal_data_id,
+     &        'sec', 'sec')
+            iret = nf90_put_att(dat%ncid, dat%max_nodal_data_id,
+     &        '_FillValue', 0.d0)
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%time_max_nodal_data_id,
+     &        '_FillValue', 0.d0)
+            CALL check_err(iret)
+         !
+         ! errmasssumfull.63
+         CASE(502)
+            dat%varnames(1) = 'ErrMassSum'
+            dat%nodal_data_dims(1) = dat%myMesh%num_nodes_dim_id
+            dat%nodal_data_dims(2) = dat%myTime%timenc_dim_id
+            iret = nf90_def_var(dat%ncid,trim(dat%varnames(1)),
+     &          NF90_DOUBLE, dat%nodal_data_dims, dat%nodal_data_id)
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%nodal_data_id,
+     &          'long_name', 
+     &          'accumulated mass conservation error')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%nodal_data_id,
+     &          'standard_name', 'accumulated_mass_conservation_error')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%nodal_data_id,
+     &          'coordinates', 'time y x')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%nodal_data_id,
+     &          'location', 'node')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%nodal_data_id,
+     &          'mesh', 'adcirc_mesh')
+            CALL check_err(iret)
+            CALL putUnitsAttribute(dat%ncid, dat%nodal_data_id,
+     &          '-', '-')
+            iret = nf90_put_att(dat%ncid, dat%nodal_data_id,
+     &          '_FillValue', 0.d0)
+            CALL check_err(iret)
+         !
+         ! errmassmaxfull.63
+         CASE(503)
+            dat%varnames(1) = 'ErrMassMax'
+            dat%varnames(2) = 'time_of_ErrMassMax'
+            dat%nodal_data_dims_max(1) = dat%myMesh%num_nodes_dim_id
+            iret = nf90_def_var(dat%ncid,trim(dat%varnames(1)),
+     &        NF90_DOUBLE, dat%nodal_data_dims_max,
+     &        dat%max_nodal_data_id)
+            CALL check_err(iret)
+            iret = nf90_def_var(dat%ncid,trim(dat%varnames(2)),
+     &        NF90_DOUBLE, dat%nodal_data_dims_max,
+     &        dat%time_max_nodal_data_id)
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%max_nodal_data_id,
+     &        'long_name', 'maximum mass conservation error')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%time_max_nodal_data_id,
+     &        'long_name', 'time of maximum mass conservation error')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%max_nodal_data_id,
+     &        'standard_name', 
+     &        'maximum_mass_conservation_error')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%time_max_nodal_data_id,
+     &        'standard_name', 
+     &        'time_of_maximum_mass_conservation_error')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%max_nodal_data_id,
+     &        'coordinates', 'y x')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%time_max_nodal_data_id,
+     &        'coordinates', 'y x')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%max_nodal_data_id,
+     &        'location', 'node')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%time_max_nodal_data_id,
+     &        'location', 'node')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%max_nodal_data_id,
+     &        'mesh', 'adcirc_mesh')
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%time_max_nodal_data_id,
+     &        'mesh', 'adcirc_mesh')
+            CALL check_err(iret)
+            CALL putUnitsAttribute(dat%ncid, dat%max_nodal_data_id,
+     &        '-', '-')
+            CALL putUnitsAttribute(dat%ncid, dat%time_max_nodal_data_id,
+     &        'sec', 'sec')
+            iret = nf90_put_att(dat%ncid, dat%max_nodal_data_id,
+     &        '_FillValue', 0.d0)
+            CALL check_err(iret)
+            iret = nf90_put_att(dat%ncid, dat%time_max_nodal_data_id,
+     &        '_FillValue', 0.d0)
+            CALL check_err(iret)
+#endif   
          !jgf: dynamicWaterlevelCorrection.63
          CASE(108)
 C
@@ -3651,6 +3842,19 @@ C     netcdf4 file format.
             iret = nf_def_var_deflate(dat%ncid, dat%max_nodal_data_id,
      &             1, 1, 2)
             CALL check_err(iret)
+#ifdef CMASSCHECK
+         CASE(500,502) ! errmasssum.63 & errmasssumfull.63
+            iret = nf_def_var_deflate(dat%ncid, dat%nodal_data_id,
+     &             1, 1, 2)
+            CALL check_err(iret)
+         CASE(501,503) ! errmassmax.63 & errmassmaxfull.63
+            iret = nf_def_var_deflate(dat%ncid, dat%max_nodal_data_id,
+     &             1, 1, 2)
+            CALL check_err(iret)
+            iret = nf_def_var_deflate(dat%ncid, dat%time_max_nodal_data_id,
+     &             1, 1, 2)
+            CALL check_err(iret)
+#endif
          CASE DEFAULT ! should be unreachable
             write(scratchMessage,
      &       '("No netCDF for files with unit number ",i0,".")') descript1 % lun
@@ -4224,7 +4428,16 @@ C
             CALL writeNodalData(eRisInun, lun, descript1, timesec)
          CASE(404)
             CALL writeNodalData(evrDry, lun, descript1, timesec)
-
+#ifdef CMASSCHECK
+         CASE(500)
+            CALL writeNodalData(ndErrMassSum, lun, descript1, timesec)
+         CASE(501)
+            CALL writeNodalData(ndErrMassMax, lun, descript1, timesec)
+         CASE(502)
+            CALL writeNodalData(ndErrMassSumFull,lun,descript1,timesec)
+         CASE(503)
+            CALL writeNodalData(ndErrMassMaxFull,lun,descript1,timesec)
+#endif
          CASE(108)
             CALL writeNodalData(dynamiccorrection, lun, descript1, timesec)
          CASE(109)
@@ -4855,7 +5068,16 @@ C
         iret=nf90_inq_varid(dat%ncid, "time_of_everdried",
      &          dat%time_max_nodal_data_id)
         CALL check_err(iret)
-
+#ifdef CMASSCHECK
+      CASE(500,502)
+        iret=nf90_inq_varid(dat%ncid,"ErrMassSum",dat%nodal_data_id)
+        CALL check_err(iret)
+      CASE(501,503)
+         iret=nf90_inq_varid(dat%ncid,"ErrMassMax",dat%max_nodal_data_id)
+         CALL check_err(iret)
+         iret=nf90_inq_varid(dat%ncid,"time_of_ErrMassMax",dat%time_max_nodal_data_id)
+         CALL check_err(iret)
+#endif
       CASE(108)
          iret=nf90_inq_varid(dat%ncid,"dynamicWaterlevelCorrection",dat%nodal_data_id)
          CALL check_err(iret)
@@ -5020,8 +5242,10 @@ C     Write the array values
             IF ( descript1%ConsiderWetDry.eqv..TRUE.) THEN
                allocate(tempArray(1:dat%myMesh%num_nodes))
                tempArray = merge(descript1%array,
-     &              spread(descript1%alternate_value,1,kount(1)),nodecode.gt.0)
-               iret = nf90_put_var(dat%ncid, dat%nodal_data_id,tempArray,start,kount)
+     &                       spread(descript1%alternate_value,1,kount(1)),
+     &                       nodecode.gt.0)
+               iret = nf90_put_var(dat%ncid, dat%nodal_data_id,
+     &                             tempArray,start,kount)
             ELSE
                iret = nf90_put_var(dat%ncid, dat%nodal_data_id,
      &            descript1%array, start, kount)
@@ -5077,6 +5301,69 @@ C     Write the array values
      &            descript1%iarray_g, start, kount)
             CALL check_err(iret)
          ENDIF
+#ifdef CMASSCHECK
+      CASE(500,502)
+         IF (MNPROC.eq.1) THEN ! SERIAL
+            IF ( descript1%ConsiderWetDry.eqv..TRUE.) THEN
+               allocate(tempArray(1:dat%myMesh%num_nodes))
+               tempArray = merge(descript1%array,
+     &              spread(descript1%alternate_value,1,kount(1)),
+     &              nodecode.gt.0)
+               iret = nf90_put_var(dat%ncid,
+     &              dat%nodal_data_id,tempArray,start,kount)
+            ELSE
+               iret = nf90_put_var(dat%ncid, dat%nodal_data_id,
+     &            descript1%array, start, kount)
+            ENDIF
+            CALL check_err(iret)
+         ELSE
+            iret = nf90_put_var(dat%ncid, dat%nodal_data_id,
+     &            descript1%array_g, start, kount)
+            CALL check_err(iret)
+         ENDIF
+         
+         IF (lun.eq.500) then
+            ! Initialize arrays once they get written out, to prepare for the next period
+            descript1 % array(:) = 0.d0
+         ENDIF
+      CASE(501,503)
+         IF (MNPROC.eq.1) THEN ! SERIAL
+            IF ( descript1%ConsiderWetDry.eqv..TRUE.) THEN
+               allocate(tempArray(1:dat%myMesh%num_nodes))
+               tempArray = merge(descript1%array,
+     &              spread(descript1%alternate_value,1,kount(1)),
+     &              nodecode.gt.0)
+               iret = nf90_put_var(dat%ncid,dat%max_nodal_data_id,
+     &              tempArray,start,kount)
+               CALL check_err(iret)
+               tempArray = merge(descript1%array2,
+     &              spread(descript1%alternate_value,1,kount(1)),
+     &              nodecode.gt.0)
+               iret = nf90_put_var(dat%ncid,dat%time_max_nodal_data_id,
+     &              tempArray,start,kount)
+               CALL check_err(iret)
+            ELSE
+               iret = nf90_put_var(dat%ncid,dat%max_nodal_data_id,
+     &              descript1%array,start,kount)
+               CALL check_err(iret)
+               iret = nf90_put_var(dat%ncid,dat%time_max_nodal_data_id,
+     &              descript1%array2,start,kount)
+               CALL check_err(iret)
+            ENDIF
+         ELSE
+            iret = nf90_put_var(dat%ncid, dat%max_nodal_data_id,
+     &           descript1%array_g,start,kount)
+            CALL check_err(iret)
+            iret = nf90_put_var(dat%ncid, dat%time_max_nodal_data_id,
+     &           descript1%array2_g,start,kount)
+            CALL check_err(iret)
+         ENDIF
+         IF (lun.eq.501) then
+            ! Initialize arrays once they get written out, to prepare for the next period
+            descript1 % array(:) = 0.d0
+            descript1 % array2(:) = 0.d0
+         ENDIF
+#endif
       CASE DEFAULT
             write(scratchMessage,
      &       '("No netCDF for files with unit number ",i0,".")') lun
