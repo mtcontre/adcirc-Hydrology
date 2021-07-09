@@ -5069,10 +5069,18 @@ C
      &          dat%time_max_nodal_data_id)
         CALL check_err(iret)
 #ifdef CMASSCHECK
-      CASE(500,502)
-        iret=nf90_inq_varid(dat%ncid,"ErrMassSum",dat%nodal_data_id)
-        CALL check_err(iret)
-      CASE(501,503)
+      CASE(500)
+         iret=nf90_inq_varid(dat%ncid,"ErrMassSum",dat%nodal_data_id)
+         CALL check_err(iret)
+      CASE(501)
+         iret=nf90_inq_varid(dat%ncid,"ErrMassMax",dat%max_nodal_data_id)
+         CALL check_err(iret)
+         iret=nf90_inq_varid(dat%ncid,"time_of_ErrMassMax",dat%time_max_nodal_data_id)
+         CALL check_err(iret)
+      CASE(502)
+         iret=nf90_inq_varid(dat%ncid,"ErrMassSum",dat%nodal_data_id)
+         CALL check_err(iret)
+      CASE(503)
          iret=nf90_inq_varid(dat%ncid,"ErrMassMax",dat%max_nodal_data_id)
          CALL check_err(iret)
          iret=nf90_inq_varid(dat%ncid,"time_of_ErrMassMax",dat%time_max_nodal_data_id)
@@ -5321,11 +5329,6 @@ C     Write the array values
      &            descript1%array_g, start, kount)
             CALL check_err(iret)
          ENDIF
-         
-         IF (lun.eq.500) then
-            ! Initialize arrays once they get written out, to prepare for the next period
-            descript1 % array(:) = 0.d0
-         ENDIF
       CASE(501,503)
          IF (MNPROC.eq.1) THEN ! SERIAL
             IF ( descript1%ConsiderWetDry.eqv..TRUE.) THEN
@@ -5357,11 +5360,6 @@ C     Write the array values
             iret = nf90_put_var(dat%ncid, dat%time_max_nodal_data_id,
      &           descript1%array2_g,start,kount)
             CALL check_err(iret)
-         ENDIF
-         IF (lun.eq.501) then
-            ! Initialize arrays once they get written out, to prepare for the next period
-            descript1 % array(:) = 0.d0
-            descript1 % array2(:) = 0.d0
          ENDIF
 #endif
       CASE DEFAULT

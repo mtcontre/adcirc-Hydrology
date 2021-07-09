@@ -59,7 +59,8 @@
 !      use gwce, only : a00,b00,c00
       use write_output, only :
      &  errMassSum,errMassMax,errMassMax_time,
-     &  errMassSumFull,errMassMaxFull,errMassMaxFull_time
+     &  errMassSumFull,errMassMaxFull,errMassMaxFull_time,
+     &  errMassSumDescript,errMassMaxDescript
 
       implicit none
 
@@ -98,12 +99,15 @@
          call unsetMessageSource()
          return
       endif
-      !!
-      !! Currently C00 must be equatl to zero for this subroutine to work properly.
-      !if (c00.ne.0.d0) then
-      !   call allMessage(ERROR,"C00 must be zero.")
-      !   call exit(1)
-      !endif
+      !
+      ! Reset arrays for each fort.63 output period
+      if (errMassSumDescript % spoolCounter.eq.0) then
+         errMassSum(:) = 0.d0
+      endif
+      if (errMassMaxDescript % spoolCounter.eq.0) then
+         errMassMax(:) = 0.d0
+         errMassMax_time(:) = 0.d0
+      endif
       !
       ! Initialize
       Ptot = 0.d0
