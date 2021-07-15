@@ -158,13 +158,13 @@
             H2 = dp(i2) + ifnlfa*eta2(i2)
             QK2 = 2.0*V1*H1 + V1*H2 + V2*H1 + 2.0*V2*H2
 
-            Q = Q + L*0.5*(QK1 + QK2)
+            Q = Q + L*(QK1 + QK2)
 
          enddo
 
          P = P*areas(j)*0.5d0/3.d0 ! complete mass change calculation
-         Q = Q*dtdp/6.d0     ! complete mass flow calculation
-         Err = P - Q           ! compute mass conservation error
+         Q = Q*dtdp/12.d0          ! complete mass flow calculation
+         Err = P - Q               ! compute mass conservation error
 
          Ptot = Ptot + P
          Qtot = Qtot + Q
