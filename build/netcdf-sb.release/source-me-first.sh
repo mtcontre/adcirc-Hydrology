@@ -4,9 +4,9 @@
 module purge
 module load intelc/18.0.0
 module load intelfort/18.0.0
-module load hdf5/debug_1.10.4_intel-18.0.0
+module load hdf5/1.10.4_intel-18.0.0
 module load mvapich2/2.3b_intel-18.0.0_ch3_ofed-4.1
-module load zlib/debug_1.2.11_intel-18.0.0
+module load zlib/1.2.11_intel-18.0.0
 module list
 
 ## Set paths
