@@ -735,7 +735,8 @@ C.............................DW, generating layer ..............
 CSB<< 20210820
           ! Consider GeoidOffset in sponge layer
           eta2_AbsLayer(AbsLayer_Eta_NodesID) =
-     &      GeoidOffset(AbsLayer_Eta_NodesID)
+     &      eta2_AbsLayer(AbsLayer_Eta_NodesID) +
+     &        GeoidOffset(AbsLayer_Eta_NodesID)
 CSB>>
         END IF
 C...............................................................
