@@ -351,9 +351,12 @@ C     update QX
              write(16,*) "MET and BPG turned off in sponge!"
            CASE (1)
              write(16,*) "Sponge Layer: Generating(Tides)-Absorbing"
-             NO_MET_IN_SPONGE = .true.
-             NO_BPG_IN_SPONGE = .true.
-             write(16,*) "MET and BPG turned off in sponge!"
+CSB<<20210913 THIS IS A TEMPORARY CHANGE!
+             !NO_MET_IN_SPONGE = .true.
+             !NO_BPG_IN_SPONGE = .true.
+             !write(16,*) "MET and BPG turned off in sponge!"
+             write(16,*) "MET and BPG kept on in sponge!"
+CSB>>
              CALL READFORT53001()
              CALL READFORT54001()
            CASE (2)
