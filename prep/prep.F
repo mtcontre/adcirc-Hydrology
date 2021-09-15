@@ -2232,7 +2232,14 @@ C
             write(15,*) "    rhoAir=",rhoAir,","
             write(15,*) "    invertedBarometerOnElevationBoundary=",
      &                        invertedBarometerOnElevationBoundary,","
-            write(15,*) "    nPowellSearchDomains=",nPowellSearchDomains
+            write(15,*) "    nPowellSearchDomains=",
+     &                        nPowellSearchDomains,","
+Csb<<20210913 Ramping of meteorological forcing in sponge
+            write(15,*) "    useMetRampInSponge=",           
+     &                        useMetRampInSponge,","
+            write(15,*) "    metRampAlphaInSponge=",
+     &                        metRampAlphaInSponge,","
+Csb>>
             write(15,*) "/"
             write(15,*) '! -- End Met Control Namelist --'
          endif

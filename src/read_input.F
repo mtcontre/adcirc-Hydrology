@@ -103,6 +103,7 @@ C-----------------------------------------------------------------------
      &   dynamicWaterLevelCorrectionRampReferenceTime,
      &   dynamicWaterLevelCorrectionMultiplier
       USE OWIWIND,ONLY: nPowellSearchDomains
+      USE SPONGELAYER, ONLY : useMetRampInSponge, metRampAlphaInSponge !sb20210913
       USE WETDRY, ONLY : noffActive, velmin
       USE ITPACKV
       USE GWCE, ONLY : a00, b00, c00, convcr, isldia, itmax,
@@ -164,7 +165,8 @@ C
      &    SWAN_OutputTM02, SWAN_OutputTMM10
 #endif
       NAMELIST /metControl/ WindDragLimit,DragLawString,outputWindDrag,
-     &  rhoAir, invertedBarometerOnElevationBoundary, nPowellSearchDomains
+     &  rhoAir, invertedBarometerOnElevationBoundary, nPowellSearchDomains,
+     &  useMetRampInSponge, metRampAlphaInSponge ! sb20210913
       NAMELIST /subdomainModeling/ subdomainOn
       NAMELIST /wetDryControl/ outputNodeCode, outputNOFF,
      &  noffActive, StatPartWetFix, How2FixStatPartWet
@@ -402,7 +404,9 @@ c     a non-default value we can determine this was the case.
      & ' invertedBarometerOnElevationBoundary=',
      &   invertedBarometerOnElevationBoundary,
      & ' outputWindDrag=',outputWindDrag,
-     & ' nPowellSearchDomains=',nPowellSearchDomains
+     & ' nPowellSearchDomains=',nPowellSearchDomains,
+     & ' useMetRampInSponge=',useMetRampInSponge,
+     & ' metRampAlphaInSponge=',metRampAlphaInSponge
       call logMessage(ECHO,trim(scratchMessage))
       rewind(15)
 

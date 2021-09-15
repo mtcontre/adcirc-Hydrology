@@ -104,6 +104,8 @@ Casey 121019: Added multiplication factor to be used before sending winds to cou
       USE WIND, ONLY :  WindDragLimit,DragLawString,rhoAir,
      &                  initWindModule
       USE OWIWIND, ONLY: nPowellSearchDomains
+      USE SPONGELAYER, ONLY :
+     &    useMetRampInSponge,metRampAlphaInSponge
 #ifdef ADCNETCDF
 Casey 180318: Added NWS=13
       USE OWIWIND_NETCDF, ONLY: NWS13ColdStartString,
@@ -222,7 +224,8 @@ C Logicals added for adcprep paths
      &    SWAN_OutputTM02, SWAN_OutputTMM10
 #endif
       NAMELIST /metControl/ WindDragLimit,DragLawString,outputWindDrag,rhoAir,
-     &                       invertedBarometerOnElevationBoundary,nPowellSearchDomains
+     &                      invertedBarometerOnElevationBoundary,nPowellSearchDomains,
+     &                      useMetRampInSponge,metRampAlphaInSponge !sb20210913
       NAMELIST /TVWControl/ USE_TVW,TVW_FILE,NOUT_TVW,TOUTS_TVW,
      &    TOUTF_TVW,NSPOOL_TVW
       LOGICAL :: NETCDF_AVAIL ! true if netCDF was compiled in

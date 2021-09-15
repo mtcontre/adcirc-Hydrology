@@ -69,6 +69,14 @@ C------------
       LOGICAL, parameter:: adjsigval = .FALSE. 
       LOGICAL :: NO_MET_IN_SPONGE = .FALSE.  
       LOGICAL :: NO_BPG_IN_SPONGE = .FALSE.  
+Csb<<20210913
+      ! Variables for namelist IO
+      LOGICAL :: useMetRampInSponge = .FALSE.
+      REAL(SZ) :: metRampAlphaInSponge = 1.0
+      ! Spatial ramping coefficient for meteorological forcing in sponge
+      REAL(SZ), ALLOCATABlE:: RampMetInSponge(:) 
+Csb>>
+
       
      
       CONTAINS
@@ -279,6 +287,10 @@ C     update QX
 
         REAL(SZ), pointer:: SSIGM_PT(:,:)
         INTEGER, pointer:: AbsLayerid_PTS(:)
+
+        REAL(SZ):: maxSigm
+        !
+        allocate( RampMetInSponge(MNP) ) ; RampMetInSponge = 1.D0 ;
         !
         IF ( NumNodesAbsLayer(1) > 0 ) THEN
           
@@ -331,8 +343,7 @@ C     update QX
 
            allocate(WorkVecEta(NumNodesAbsLayer(1))) ; 
            allocate(WorkVecUU(NumNodesAbsLayer(2))) ; 
-           allocate(WorkVecVV(NumNodesAbsLayer(3))) ; 
-
+           allocate(WorkVecVV(NumNodesAbsLayer(3))) ;
 
            IMIN = MINLOC(abs(SSDUM)) ;
            IF ( abs(SSDUM(IMIN(1))) > 0 ) THEN
@@ -346,30 +357,46 @@ C     update QX
            CASE (0)
              write(16,*) "Sponge Layer: Fully Absorbing"
              AbsLayerNBF = 0 ;
-             NO_MET_IN_SPONGE = .true.
+             IF (.not.useMetRampInSponge) NO_MET_IN_SPONGE = .true.
              NO_BPG_IN_SPONGE = .true.
-             write(16,*) "MET and BPG turned off in sponge!"
            CASE (1)
              write(16,*) "Sponge Layer: Generating(Tides)-Absorbing"
-             NO_MET_IN_SPONGE = .true.
+             IF (.not.useMetRampInSponge) NO_MET_IN_SPONGE = .true.
              NO_BPG_IN_SPONGE = .true.
-             write(16,*) "MET and BPG turned off in sponge!"
              CALL READFORT53001()
              CALL READFORT54001()
            CASE (2)
              write(16,*) "Sponge Layer: Generating(Tides+Arb)-Absorbing"
-             NO_MET_IN_SPONGE = .true.
+             IF (.not.useMetRampInSponge) NO_MET_IN_SPONGE = .true.
              NO_BPG_IN_SPONGE = .true.
-             write(16,*) "MET and BPG turned off in sponge!"
              CALL READFORT53001()
              CALL READFORT54001()
              CALL READFORT2001(.true.)
            CASE (-1)
              write(16,*) "Sponge Layer: Generating(Arbitrary)-Absorbing"
-             write(16,*) "MET and BPG kept on in sponge!"
              CALL READFORT2001(.true.)
              AbsLayerNBF = 0 ;
            END SELECT
+
+           IF (NO_MET_IN_SPONGE) THEN
+             write(16,*) "MET turned off in sponge!"
+           ELSE
+             write(16,*) "MET kept on in sponge!"
+           ENDIF
+           IF (NO_BPG_IN_SPONGE) THEN
+             write(16,*) "BPG turned off in sponge!"
+           ELSE
+             write(16,*) "BPG kept on in sponge!"
+           ENDIF
+
+           IF (useMetRampInSponge) THEN
+             maxSigm = MAXVAL(SSIGM_PT)
+             DO I = 1, NumNodesAbsLayer(K)
+               NODEID = AbsLayerid_PTS(I)
+               RampMetInSponge(NODEID) = 
+     &           1.D0 - metRampAlphaInSponge*SSIGM_PT(NODEID,1)/maxSigm
+             END DO
+           END IF
         END IF
         !
         RETURN ;
