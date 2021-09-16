@@ -1513,6 +1513,32 @@ C---------------------------------------------------------------------
 C---------------------------------------------------------------------      
 !=============================================================================
 
+C---------------------------------------------------------------------
+C     S U B R O U T I N E   M S G _ R M A X
+C---------------------------------------------------------------------
+C     Find maximum of a real value among compute nodes
+C     sb20210915 
+C---------------------------------------------------------------------
+      subroutine MSG_RMAX(valuein,valueout)
+C      use messenger
+#ifndef HAVE_MPI_MOD
+      include 'mpif.h'
+#endif
+      real(sz),intent(in) :: valuein
+      real(sz),intent(out) :: valueout
+      real(sz) :: bufin(1)
+      real(sz) :: bufout(1)
+      integer :: ierr
+
+      bufin(1) = valuein
+      call mpi_allreduce(bufin, bufout, 1,
+     &                   REALTYPE, MPI_MAX, COMM, ierr)
+      valueout = bufout(1)
+C---------------------------------------------------------------------      
+      end subroutine MSG_RMAX
+C---------------------------------------------------------------------      
+!=============================================================================
+
       END MODULE MESSENGER
 
       subroutine MSG_ABORT()

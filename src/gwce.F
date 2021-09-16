@@ -1017,18 +1017,21 @@ C
             Pr1N2=PR1(NM2)
             Pr1N3=PR1(NM3)
 
-            !c Pressure c!
-            IF ( NO_MET_IN_SPONGE ) THEN
-               IF ( absorblayer_sigma_eta(NM1,1) > 1.0e-9 ) THEN
-                  Pr1N1 = PRBCKGRND_MH2O
-               END IF
-               IF ( absorblayer_sigma_eta(NM2,1) > 1.0e-9 ) THEN
-                  Pr1N2 = PRBCKGRND_MH2O
-               END IF
-               IF ( absorblayer_sigma_eta(NM3,1) > 1.0e-9 ) THEN
-                  Pr1N3 = PRBCKGRND_MH2O
-               END IF
-            END IF
+Csb20210915 RampMetInSponge is now set at nodes in sponge_layer.F 
+! to consider NO_MET_IN_SPONGE and useMetRampInSponge flags
+! and applied to winds/pressure/waves when read/evaluated.
+            !c Pressure c!  
+            !IF ( NO_MET_IN_SPONGE ) THEN
+            !   IF ( absorblayer_sigma_eta(NM1,1) > 1.0e-9 ) THEN
+            !      Pr1N1 = PRBCKGRND_MH2O
+            !   END IF
+            !   IF ( absorblayer_sigma_eta(NM2,1) > 1.0e-9 ) THEN
+            !      Pr1N2 = PRBCKGRND_MH2O
+            !   END IF
+            !   IF ( absorblayer_sigma_eta(NM3,1) > 1.0e-9 ) THEN
+            !      Pr1N3 = PRBCKGRND_MH2O
+            !   END IF
+            !END IF
          ENDIF
 C ....,... END DW
 C
@@ -1218,21 +1221,26 @@ C
          AvgSigmaHAbsV = (SgN1_mny*H1N1*V1AN1 +
      &        SgN2_mny*H1N2*V1AN2 + SgN3_mny*H1N3*V1AN3)/3.D0 ; 
 
+Csb20210915 RampMetInSponge is now set at nodes in sponge_layer.F 
+! to consider NO_MET_IN_SPONGE and useMetRampInSponge flags
+! and applied to winds/pressure/waves when read/evaluated.
          IF ((NWS.NE.0).OR.(NRS.NE.0)) THEN     !wind or radiation stress
-            fwsx1 = 1.D0 ; fwsx2 = 1.D0 ; fwsx3 = 1.D0 ;
-            fwsy1 = 1.D0 ; fwsy2 = 1.D0 ; fwsy3 = 1.D0 ;
-            IF ( NO_MET_IN_SPONGE ) THEN
-               IF ( absorblayer_sigma_mnx(NM1,1) > 1e-9 ) fwsx1 = 0.D0
-               IF ( absorblayer_sigma_mnx(NM2,1) > 1e-9 ) fwsx2 = 0.D0
-               IF ( absorblayer_sigma_mnx(NM3,1) > 1e-9 ) fwsx3 = 0.D0
+            ! fwsx1 = 1.D0 ; fwsx2 = 1.D0 ; fwsx3 = 1.D0 ;
+            ! fwsy1 = 1.D0 ; fwsy2 = 1.D0 ; fwsy3 = 1.D0 ;
+            ! IF ( NO_MET_IN_SPONGE ) THEN
+            !    IF ( absorblayer_sigma_mnx(NM1,1) > 1e-9 ) fwsx1 = 0.D0
+            !    IF ( absorblayer_sigma_mnx(NM2,1) > 1e-9 ) fwsx2 = 0.D0
+            !    IF ( absorblayer_sigma_mnx(NM3,1) > 1e-9 ) fwsx3 = 0.D0
            
-               IF ( absorblayer_sigma_mny(NM1,1) > 1e-9 ) fwsy1 = 0.D0
-               IF ( absorblayer_sigma_mny(NM2,1) > 1e-9 ) fwsy2 = 0.D0
-               IF ( absorblayer_sigma_mny(NM3,1) > 1e-9 ) fwsy3 = 0.D0
-            END IF
-         
-            WSXAvg=(fwsx1*WSX1(NM1)+fwsx2*WSX1(NM2)+fwsx3*WSX1(NM3))/3.d0
-            WSYAvg=(fwsy1*WSY1(NM1)+fwsy2*WSY1(NM2)+fwsy3*WSY1(NM3))/3.d0
+            !    IF ( absorblayer_sigma_mny(NM1,1) > 1e-9 ) fwsy1 = 0.D0
+            !    IF ( absorblayer_sigma_mny(NM2,1) > 1e-9 ) fwsy2 = 0.D0
+            !    IF ( absorblayer_sigma_mny(NM3,1) > 1e-9 ) fwsy3 = 0.D0
+            ! END IF
+            !
+            ! WSXAvg=(fwsx1*WSX1(NM1)+fwsx2*WSX1(NM2)+fwsx3*WSX1(NM3))/3.d0
+            ! WSYAvg=(fwsy1*WSY1(NM1)+fwsy2*WSY1(NM2)+fwsy3*WSY1(NM3))/3.d0
+            WSXAvg=(WSX1(NM1)+WSX1(NM2)+WSX1(NM3))/3.d0
+            WSYAvg=(WSY1(NM1)+WSY1(NM2)+WSY1(NM3))/3.d0
          ENDIF
 C------- END DW
 C 
@@ -1527,7 +1535,9 @@ C     on and off according to analyst preference.
          if (invertedBarometerOnElevationBoundary.eqv..true.) then
             DO I=1,NETA
                ETA2(NBD(I)) = ETA2(NBD(I))
-     &                  + RampMete*(101300.d0/(RHOWAT0*G) - PR2(NBD(I)))
+     &                  + RampMete
+     &                    *RampMetInSponge(I) !sb20210915 added
+     &                    *(101300.d0/(RHOWAT0*G) - PR2(NBD(I)))
             END DO
          endif
       ENDIF

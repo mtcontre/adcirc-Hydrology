@@ -127,7 +127,8 @@ Casey 100205: Add a variable for writing of SWAN hot-start files.
 
       USE WEIR_FLUX
       USE SPONGELAYER, ONLY: LoadAbsLayerSigma, sponge_dis_mthd, sponge_opsplit0,
-     &     adjust_sponge_sigma, getabslayerext, sponge_shift_soln
+     &     adjust_sponge_sigma, getabslayerext, sponge_shift_soln,
+     &     RampMetInSponge  !sb20210915
 
 #ifdef CMASSCHECK
       USE MASSCHECK,   ONLY: computeMassConservError
@@ -636,19 +637,22 @@ c...             include NRS=4
 #ifdef CSWAN
 Casey 090302: Added these lines for coupling winds to SWAN.
 Casey 121019: Added multiplication factor to be used before sending winds to coupled wave models.
+Csb   210915: Added RampMetInSponge(i)
       if (coupwind) then
          select case(abs(nws))
          case(12,16)
             do i=1,np
                swan_wx2(i,2) = wvnxout(i) * waveWindMultiplier 
-     &                         / ( rampMete * windMultiplier ) 
+     &           / ( rampMete * RampMetInSponge(i) * windMultiplier )  
                swan_wy2(i,2) = wvnyout(i) * waveWindMultiplier 
-     &                         / ( rampMete * windMultiplier ) 
+     &           / ( rampMete * RampMetInSponge(i) * windMultiplier )
             end do
          case default
             do i=1,np
-               swan_wx2(i,2) = wvnxout(i) * waveWindMultiplier / rampMete
-               swan_wy2(i,2) = wvnyout(i) * waveWindMultiplier / rampMete
+               swan_wx2(i,2) = wvnxout(i) * waveWindMultiplier
+     &           / ( rampMete * RampMetInSponge(i) ) 
+               swan_wy2(i,2) = wvnyout(i) * waveWindMultiplier
+     &           / ( rampMete * RampMetInSponge(i) ) 
             end do
          end select
       endif
@@ -690,8 +694,11 @@ C             into RSNX1/RSNY1, and then load the future forces into RSNX2/RSNY2
             ENDIF
             RStRatio=(TimeLoc-RSTIME1)/RSTIMINC
             DO I=1,NP
-               RSX = RampWRad*(RSNX1(I) + RStRatio*(RSNX2(I)-RSNX1(I)))
-               RSY = RampWRad*(RSNY1(I) + RStRatio*(RSNY2(I)-RSNY1(I)))
+Csb20210915 Added RampMetInSponge(I)
+               RSX = RampWRad*RampMetInSponge(I)*
+     &               (RSNX1(I) + RStRatio*(RSNX2(I)-RSNX1(I)))
+               RSY = RampWRad*RampMetInSponge(I)*
+     &               (RSNY1(I) + RStRatio*(RSNY2(I)-RSNY1(I)))
                WSX2(I) = WSX2(I) + RSX
                WSY2(I) = WSY2(I) + RSY
 !  tcm v50.75 removed ifdef cswan to allow for use whenever nrs=3 or nrs=4
@@ -717,8 +724,9 @@ Casey 090302: Added these lines for output to the rads.64 file.
               RSNX2(:) = 0.0d0;  RSNY2(:) = 0.0d0
             ENDIF
             DO I=1,NP
-               RSX = RampWRad*RSNX2(I)
-               RSY = RampWRad*RSNY2(I)
+Csb20210915 Added RampMetInSponge(I)
+               RSX = RampWRad*RampMetInSponge(I)*RSNX2(I)
+               RSY = RampWRad*RampMetInSponge(I)*RSNY2(I)
                WSX2(I) = WSX2(I) + RSX
                WSY2(I) = WSY2(I) + RSY
                !  tcm v50.75 added for use whenever nrs=3 or nrs=4

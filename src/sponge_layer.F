@@ -275,6 +275,7 @@ C     update QX
         RETURN ; 
       END SUBROUTINE ComputeSpongeMsElmMat
 
+Csb20210915 Updated for spatial ramping of meteorological forcing
       SUBROUTINE SpongeLayerRelatedPrep( ) 
         IMPLICIT NONE
 
@@ -288,10 +289,26 @@ C     update QX
         REAL(SZ), pointer:: SSIGM_PT(:,:)
         INTEGER, pointer:: AbsLayerid_PTS(:)
 
-        REAL(SZ):: maxSigm
+        REAL(SZ):: maxSigm,maxSigmAll
         !
         allocate( RampMetInSponge(MNP) ) ; RampMetInSponge = 1.D0 ;
         !
+        ! Find the maximum sigma value to be used later for ramping
+        maxSigm = 0.D0
+        write(16,*) 'here1 ',NumNodesAbsLayer(1)
+        IF ( NumNodesAbsLayer(1) > 0 ) THEN
+          maxSigm = MAXVAL(SSIGMA_ETA(:,1))
+        ENDIF
+        write(16,*) 'here2'
+#ifdef CMPI
+        if (mnproc.gt.1) then
+          call msg_rmax(maxSigm,maxSigmAll)
+          write(16,'(A,E11.4,E11.4)') 'Sigm ',maxSigm,maxSigmAll
+          maxSigm = maxSigmAll
+        endif
+#endif             
+        write(16,*) 'here3'
+!
         IF ( NumNodesAbsLayer(1) > 0 ) THEN
           
            !IF (  GWCE_spg_alt ) THEN
@@ -380,6 +397,16 @@ C     update QX
 
            IF (NO_MET_IN_SPONGE) THEN
              write(16,*) "MET turned off in sponge!"
+             write(16,*) "Met forcing is ramped in sponge with coeffs:"
+             DO I = 1, NumNodesAbsLayer(1)
+               NODEID = AbsLayerid_PTS(I)
+               RampMetInSponge(NODEID) = 0.D0
+               write(16,"(A,I,A,E12.4,A)")
+     &           "      (NODE,COEF) = (",
+     &           NODEID,",",RampMetInSponge(NODEID),")"
+               write(16,*)
+             END DO
+             write(16,*)
            ELSE
              write(16,*) "MET kept on in sponge!"
            ENDIF
@@ -389,13 +416,19 @@ C     update QX
              write(16,*) "BPG kept on in sponge!"
            ENDIF
 
-           IF (useMetRampInSponge) THEN
-             maxSigm = MAXVAL(SSIGM_PT)
-             DO I = 1, NumNodesAbsLayer(K)
+           IF (.not.NO_MET_IN_SPONGE.and.useMetRampInSponge) THEN
+             write(16,*)
+             write(16,*) "Met forcing is ramped in sponge with coeffs:"
+             DO I = 1, NumNodesAbsLayer(1)
                NODEID = AbsLayerid_PTS(I)
                RampMetInSponge(NODEID) = 
      &           1.D0 - metRampAlphaInSponge*SSIGM_PT(NODEID,1)/maxSigm
+               write(16,"(A,I10,A,E12.4,A,E12.4,E12.4,E12.4)")
+     &           "      (NODE,COEF) = (",
+     &           NODEID,",",RampMetInSponge(NODEID),")",
+     &           metRampAlphaInSponge,maxSigm,SSIGM_PT(NODEID,1)
              END DO
+             write(16,*)
            END IF
         END IF
         !

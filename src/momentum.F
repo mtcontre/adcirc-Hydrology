@@ -338,22 +338,25 @@ C....... DW
             pr2_NM2 = PR2(NM2)  
             pr2_NM3 = PR2(NM3) 
 
-            IF ( NO_MET_IN_SPONGE ) THEN
-               ! 
-               IF ( absorblayer_sigma_eta(NM1,1) > 1e-9 ) THEN
-                  pr1_NM1  =  PRBCKGRND_MH2O
-                  pr2_NM1  =  PRBCKGRND_MH2O
-               END IF
-               IF ( absorblayer_sigma_eta(NM2,1) > 1e-9 ) THEN
-                  pr1_NM2  =  PRBCKGRND_MH2O
-                  pr2_NM2  =  PRBCKGRND_MH2O
-               END IF
-               IF ( absorblayer_sigma_eta(NM3,1) > 1e-9 ) THEN
-                  pr1_NM3  =  PRBCKGRND_MH2O
-                  pr2_NM3  =  PRBCKGRND_MH2O
-               END IF
-               !
-            END IF
+Csb20210915 RampMetInSponge is now set at nodes in sponge_layer.F 
+! to consider NO_MET_IN_SPONGE and useMetRampInSponge flags
+! and applied to winds/pressure/waves when read/evaluated.
+            !IF ( NO_MET_IN_SPONGE ) THEN
+            !   ! 
+            !   IF ( absorblayer_sigma_eta(NM1,1) > 1e-9 ) THEN
+            !      pr1_NM1  =  PRBCKGRND_MH2O
+            !      pr2_NM1  =  PRBCKGRND_MH2O
+            !   END IF
+            !   IF ( absorblayer_sigma_eta(NM2,1) > 1e-9 ) THEN
+            !      pr1_NM2  =  PRBCKGRND_MH2O
+            !      pr2_NM2  =  PRBCKGRND_MH2O
+            !   END IF
+            !   IF ( absorblayer_sigma_eta(NM3,1) > 1e-9 ) THEN
+            !      pr1_NM3  =  PRBCKGRND_MH2O
+            !      pr2_NM3  =  PRBCKGRND_MH2O
+            !   END IF
+            !   !
+            !END IF
              
             BTP1N1=BTP1N1+PR1_NM1
             BTP2N1=BTP2N1+PR2_NM1
@@ -689,10 +692,13 @@ C      DispY=0.D0
          ENDIF
 
 C......  DW : BEGIN !c absorbing layer
-         IF (NO_MET_IN_SPONGE) THEN
-           IF ( absorblayer_sigma_mnx(I,1) > 1e-9 ) WSX = 0.D0 
-           IF ( absorblayer_sigma_mny(I,1) > 1e-9 ) WSY = 0.D0 
-         ENDIF
+Csb20210915 RampMetInSponge is now set at nodes in sponge_layer.F 
+! to consider NO_MET_IN_SPONGE and useMetRampInSponge flags
+! and applied to winds/pressure/waves when read/evaluated.
+         ! IF (NO_MET_IN_SPONGE) THEN
+         !   IF ( absorblayer_sigma_mnx(I,1) > 1e-9 ) WSX = 0.D0 
+         !   IF ( absorblayer_sigma_mny(I,1) > 1e-9 ) WSY = 0.D0 
+         ! ENDIF
 
          IF (MOM_SPONGE) THEN
             SPNGCOEF_X = absorblayer_sigma_mnx(I,1)*sponge_dis_mthd
