@@ -504,7 +504,7 @@ C-----------------------------------------------------------------------
      &          'flux_specified_boundary'//char(0), XDMF_SET_TYPE_NODE, 
      &          externalFluxBoundaries(efCount)%xdmf_nodes(:), nvell(i), XDMF_ARRAY_TYPE_INT32)
             efCount = efCount + 1
-         case(4,24)
+         case(4,24,64)
             internalFluxBoundaries(ifCount)%attributeIDs(1) = 
      &          XdmfAddAttribute(descript % xdmfMD % xdmfFortranObj, 
      &          'IBCONN'//CHAR(0), 
@@ -649,7 +649,7 @@ C-----------------------------------------------------------------------
      &          'flux_specified_boundary'//char(0), XDMF_SET_TYPE_NODE, 
      &          externalFluxBoundaries(efCount)%xdmf_nodes(:), nvell(i), XDMF_ARRAY_TYPE_INT32)
             efCount = efCount + 1
-         case(4,24)
+         case(4,24,64)
             do j=1, internalFluxBoundaries(ifCount)%numAttributes
                call xdmfAddPreviousAttribute(descript % xdmfMD % xdmfFortranObj, 
      &                internalFluxBoundaries(ifCount)%attributeIDs(j))

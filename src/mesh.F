@@ -236,7 +236,7 @@
              numSimpleFluxBoundaries = numSimpleFluxBoundaries + 1
          case(3,13,23)
              numExternalFluxBoundaries = numExternalFluxBoundaries + 1
-         case(4,24)
+         case(4,24,64)
              numInternalFluxBoundaries = numInternalFluxBoundaries + 1
              ! jgf51.52.24: added nvell(k) for boundaries with backside
              ! nodes, since these are to be included in nvel.
@@ -461,7 +461,7 @@
          ! paired node number, the barrier elevation above the Geoid and the
          ! coefficients of supercritical and subcritical flow for the nodes
          ! in the Kth boundary segment.
-         case(4,24)
+         case(4,24,64)
             internalFluxBoundaries(ifCount)%indexNum = k
             do j = 1, nvell(k)
                read(unit=iunit,fmt=*,err=10,end=20,iostat=ios)
@@ -884,7 +884,7 @@
                   numSimpleFluxBoundaries = numSimpleFluxBoundaries + 1
                case(3,13,23)
                   numExternalFluxBoundaries = numExternalFluxBoundaries + 1
-               case(4,24)
+               case(4,24,64)
                   numInternalFluxBoundaries = numInternalFluxBoundaries + 1
                case(5,25)
                   numInternalFluxBoundariesWithPipes = numInternalFluxBoundariesWithPipes + 1
@@ -1040,7 +1040,7 @@
                   end select
                end do
                efCount = efCount + 1
-            case(4,24)  ! internal barrier boundary (e.g., subgrid scale levee)
+            case(4,24,64)  ! internal barrier boundary (e.g., subgrid scale levee)
                internalFluxBoundaries(ifCount)%indexNum = fluxCount
                ! get the node numbers on the boundary
                call xdmfRetrieveSetValues(xdmfFortranObj, setIndex,
@@ -1204,7 +1204,7 @@
             barlancfspr(fluxCount,1:nvell(fluxCount)) =
      &               externalFluxBoundaries(efCount)%barlancfsp
             efCount = efCount + 1
-         case(4,24)  ! internal barrier boundary (e.g., subgrid scale levee)
+         case(4,24,64)  ! internal barrier boundary (e.g., subgrid scale levee)
             ! populate adcirc-native arrays
             nbvv(fluxCount,1:nvell(fluxCount)) =
      &             internalFluxBoundaries(ifCount)%nodes
@@ -1713,7 +1713,8 @@
       ! each segment and setting up boundary arrays
       NBOULOOP: DO K=1,NBOU
 !        write out flow boundary information to unit 16
-         IF((IBTYPE(K).EQ.4).OR.(IBTYPE(K).EQ.24)) THEN
+         IF((IBTYPE(K).EQ.4).OR.(IBTYPE(K).EQ.24).OR.
+     &      (IBTYPE(K).EQ.64)) THEN
             WRITE(16,28) K,NVELL(K),K,2*NVELL(K)
  28         FORMAT(///,5X,'TOTAL NUMBER OF PAIRS FOR FLOW BOUNDARY',
      &           ' SEGMENT',2X,i0,2X,'=',2X,i0,
@@ -1946,6 +1947,23 @@
      &          7X,'The momentum equations are used to compute the',/,
      &          7X,'velocity field the same as for a nonboundary ',
      &          'node.',/)
+         CASE(64)
+           NFLUXIB=1
+           WRITE(16,6533)
+ 6533      FORMAT(5X,'THIS SEGMENT IS AN INTERNAL BARRIER BOUNDARY:',/,
+     &            7X,'WITH CROSS BARRIER FLOW TREATED AS A NATURAL ',
+     &               ' NORMAL FLOW BOUNDARY CONDITION',/,
+     &            7X,'WHICH LEAVES/ENTERS THE DOMAIN ON ONE SIDE OF ',
+     &               ' THE BARRIER AND ENTERS/LEAVES THE DOMAIN ON THE',
+     &          /,7X,'CORRESPONDING OPPOSITE SIDE OF THE BARRIER ',/,
+     &            7X,'FLOW RATE AND DIRECTION ARE BASED ON BARRIER ',
+     &               ' HEIGHT, SURFACE WATER ELEVATION',/,
+     &            7X,'ON BOTH SIDES OF THE BARRIER, BARRIER COEFFICIEN',
+     &               'T AND THE APPROPRIATE BARRIER FLOW FORMULA',/,
+     &            7X,'FREE TANGENTIAL SLIP IS ALLOWED.',/,
+     &            7X,'EACH NODE PAIR IS TREATED AS IF THEY ARE A SINGL',
+     &               'E NODE IF THE WATER HEIGHTS ON BOTH SIDES',/,
+     &            7X,'EXCEED THE BARRIER HEIGHTS.')
          END SELECT
          !
          ! set the constants used in setting up the boundary arrays
@@ -1953,7 +1971,7 @@
          case(3,13,23)
             nprbi = 1
             npipe = 0
-         case(4,24)
+         case(4,24,64)
             nprbi = 2
             npipe = 0
          case(5,25)
@@ -2005,7 +2023,8 @@
             ENDIF
 
 !...        WRITE OUT ADDITIONAL HEADER FOR INTERNAL BARRIER BOUNDARIES
-            IF((IBTYPE(K).EQ.4).OR.(IBTYPE(K).EQ.24)) THEN
+            IF((IBTYPE(K).EQ.4).OR.(IBTYPE(K).EQ.24).OR.
+     &         (IBTYPE(K).EQ.64)) THEN
                IF(IPRBI.EQ.1) THEN
                   WRITE(16,1842)
  1842            FORMAT(/,5X,'FRONT FACE OF INTERNAL BARRIER BOUNDARY',/)
@@ -2368,7 +2387,7 @@
                ENDIF
 
 !...........   LOAD INTERNAL BARRIER BOUNDARY INFORMATION INTO THE CORRECT VECTORS
-               IF((IBTYPE(K).EQ.4).OR.(IBTYPE(K).EQ.24)) THEN
+               IF((IBTYPE(K).EQ.4).OR.(IBTYPE(K).EQ.24).OR.(IBTYPE(K).EQ.64)) THEN
                   IBCONN(JGW)=IBCONNR(K,I)
                   BARINHT(JGW)=BARINHTR(K,I)
                   BARINCFSB(JGW)=BARINCFSBR(K,I)
@@ -2415,7 +2434,8 @@
                   ENDIF
                ENDIF
 !...........   CHECK INTERNAL BARRIER HEIGHTS AGAINST DEPTHS
-               IF((IBTYPE(K).EQ.4).OR.(IBTYPE(K).EQ.24)) THEN
+               IF((IBTYPE(K).EQ.4).OR.(IBTYPE(K).EQ.24).OR.
+     &            (IBTYPE(K).EQ.64)) THEN
                   IF(BARINHT(JGW).LT.-DP(NBV(JGW))) THEN
                      write(scratchMessage,8368)
      &                    JGW,NBV(JGW),BARINHT(JGW),DP(NBV(JGW))
@@ -2477,7 +2497,7 @@
 !...  ANY EXTERNAL BARRIER BOUNDARY. IF THIS DOES OCCUR, TAKE
 !...  APPROPRIATE ACTION
                IF((IBTYPE(K).EQ.4).OR.(IBTYPE(K).EQ.24).OR.
-     &              (IBTYPE(K).EQ.5)
+     &              (IBTYPE(K).EQ.64).OR.(IBTYPE(K).EQ.5)
      &              .OR.(IBTYPE(K).EQ.25)) THEN
                   DO ICK=1,NVELEXT
 !...  CHECK IF OVERLAP EXISTS
@@ -2534,7 +2554,8 @@
      &               '(NATURAL NO NORMAL FLOW WITH SLIP BOUNDARY) ')
                            LBCODEI(ICK)=20
                         ENDIF
-                        IF(((IBTYPE(K).EQ.24).AND.(LBCODEI(ICK).EQ.10))
+                        IF((((IBTYPE(K).EQ.24).OR.(IBTYPE(K).EQ.64))
+     &                       .AND.(LBCODEI(ICK).EQ.10))
      &                       .OR.((IBTYPE(K).EQ.25)
      &                       .AND.(LBCODEI(ICK).EQ.10))) THEN
                            WRITE(16,8570) JGW,ICK,ICK
@@ -2649,7 +2670,8 @@
      &                4X,'SUB-CRIT. INT. BAR. COEF.',
      &                4X,'SUPER-CRIT. INT. BAR. COEF.',/)
          DO J=1,NVEL
-            IF((LBCODEI(J).EQ.4).OR.(LBCODEI(J).EQ.24)) THEN
+            IF((LBCODEI(J).EQ.4).OR.(LBCODEI(J).EQ.24).OR.
+     &         (LBCODEI(J).EQ.64)) THEN
                WRITE(16,2325) NBV(J),IBCONN(J),BARINHT(J),
      &                       BARINCFSB(J),BARINCFSP(J)
  2325         FORMAT(5X,i0,7X,i0,6X,F14.5,12X,F12.3,17X,F12.3)

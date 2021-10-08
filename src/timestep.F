@@ -996,7 +996,7 @@ C                     ACROSS A WEIR
          I = 0                         
          DO K = 1, NBOU  
             SELECT CASE(LBCODEI(I+1))
-                CASE(4,24,5,25)
+                CASE(4,24,64,5,25)
                     DO J = 1,NVELL(K)*2
                         I = I + 1
                         CALL COMPUTE_INTERNAL_BOUNDARY_FLUX(I,J,K,

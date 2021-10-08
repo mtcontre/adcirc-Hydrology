@@ -304,7 +304,7 @@ C...............COUNT THE NUMBER OF WEIR STYLE BOUNDARIES
                 NWEIR = 0
                 DO I = 1,NVEL
                     SELECT CASE(LBCODEI(I))
-                        CASE(3,13,23,4,24,5,25)
+                        CASE(3,13,23,4,24,64,5,25)
                             NWEIR = NWEIR + 1
                     END SELECT
                 ENDDO
@@ -314,7 +314,7 @@ C...............CONSTRUCT ARRAYS OF X,Y FOR BOUNDARY NODE LOCATIONS
                 IDX = 0
                 DO I = 1,NVEL
                     SELECT CASE(LBCODEI(I))
-                        CASE(3,13,23,4,24,5,25)
+                        CASE(3,13,23,4,24,64,5,25)
                             IDX = IDX + 1
                             BAR_LOCATIONS(1,IDX) = X(NBV(I))
                             BAR_LOCATIONS(2,IDX) = Y(NBV(I))
@@ -638,7 +638,7 @@ C...............COMPUTE THE NEW BOUNDARY HEIGHT
                             BAR_DZ = BARLANHT(MYIDX) - 
      &                               BARHT_FINAL(MYIDX)
                             BAR_START = BARLANHT(MYIDX)
-                        CASE(4,24,5,25)
+                        CASE(4,24,64,5,25)
                             BAR_DZ = BARINHT(MYIDX) - BARHT_FINAL(MYIDX)
                             BAR_START = BARINHT(MYIDX)
                         CASE DEFAULT
@@ -872,7 +872,7 @@ C                   VALUES BASED UPON MESH GEOMETRY.
                             SELECT CASE(LBCODEI(MYIDX))
                                 CASE(3,13,23)
                                     BARHT_FINAL(MYIDX) = -DP(NNBB1)
-                                CASE(4,14,24,5,25)
+                                CASE(4,14,24,64,5,25)
                                     NNBB2 = IBCONN(MYIDX)
                                     BARHT_FINAL(MYIDX) = 
      &                                 MIN(-DP(NNBB1),-DP(NNBB2))
@@ -885,7 +885,7 @@ C                   VALUES BASED UPON MESH GEOMETRY.
      &                                  BARLANHT2(MYIDX) + 
      &                                  BAR_SCHEDULE(MYIDX)%
      &                                  SECTION(MYSEC)%BARHT_DELTA
-                                CASE(4,14,24,5,25)
+                                CASE(4,14,24,64,5,25)
                                     BARHT_FINAL(MYIDX) = 
      &                                  BARINHT2(MYIDX) + 
      &                                  BAR_SCHEDULE(MYIDX)%
@@ -900,7 +900,7 @@ C                   VALUES BASED UPON MESH GEOMETRY.
      &                                  BARLANHT2(MYIDX) - 
      &                                  BAR_SCHEDULE(MYIDX)%
      &                                  SECTION(MYSEC)%BARHT_DELTA
-                                CASE(4,14,24,5,25)
+                                CASE(4,14,24,64,5,25)
                                     BARHT_FINAL(MYIDX) = 
      &                                  BARINHT2(MYIDX) - 
      &                                  BAR_SCHEDULE(MYIDX)%
@@ -912,7 +912,7 @@ C                   VALUES BASED UPON MESH GEOMETRY.
                             SELECT CASE(LBCODEI(MYIDX))
                                 CASE(3,13,23)
                                     BARHT_FINAL(MYIDX) = BARLANHT(MYIDX)
-                                CASE(4,14,24,5,25)
+                                CASE(4,14,24,64,5,25)
                                     BARHT_FINAL(MYIDX) = BARINHT(MYIDX)
                             END SELECT
                         CASE DEFAULT
@@ -1300,7 +1300,7 @@ C...........................A ONE SIDED STYLE WEIR, WE DONT NEED X2 AND Y2
                                 BAR_SCHEDULE(IDX)%OFFSET = OFFSET   
                             ENDIF
 
-                        CASE(4,24,5,25)
+                        CASE(4,24,64,5,25)
 C...........................A TWO SIDED STYLE WEIR, WE NEED X2 AND Y2
                             CALL FIND_BOUNDARY_NODES(X2,Y2,IDX2)
                             IF(IDX2.EQ.-1)THEN

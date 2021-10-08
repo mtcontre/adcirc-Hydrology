@@ -108,7 +108,7 @@ C.....for internal barrier boundaries with flowthrough pipes
       integer :: numExternalFluxBoundaries 
       integer :: efCount   ! index into the externalFluxBoundaries array
       !
-      ! flux boundaries where ibtype = 4, 24
+      ! flux boundaries where ibtype = 4, 24, 64
       type internalFluxBoundary_t
          integer :: indexNum               ! order within the fort.14 file
          integer :: informationID              ! xdmf ID for IBTYPE info
@@ -331,7 +331,7 @@ C     ---------
             allocate(externalFluxBoundaries(efCount)%barlancfsp(nvell(i)))
             allocate(externalFluxBoundaries(efCount)%xdmf_nodes(nvell(i)))
             efCount = efCount + 1
-         case(4,24)        
+         case(4,24,64)        
             allocate(internalFluxBoundaries(ifCount)%nodes(nvell(i)))
             allocate(internalFluxBoundaries(ifCount)%ibconn(nvell(i)))
             allocate(internalFluxBoundaries(ifCount)%barinht(nvell(i)))
@@ -489,7 +489,7 @@ C     ------------------------------------------------------------------
       nweir = 0
       do k = 1,nbou
          select case(ibtype(k))
-         case(4,24)
+         case(4,24,64)
             nweir = nweir + nvell(k)
          case(5,25)
             print *, 'error: ibtype 5 and 25 not supported by adcprep.'
@@ -572,7 +572,7 @@ C     ------------------------------------------------------------------
                bar2(k,i) = barlancfspr(k,i)
                p_ibconnr(k,:) = 0
             enddo
-         case(4,24)
+         case(4,24,64)
             do i=1,nvell(k)
                bar1(k,i) = barinhtr(k,i)
                bar2(k,i) = barincfsbr(k,i)

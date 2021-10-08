@@ -846,7 +846,7 @@ do setIndex=0, numSets-1
             numSimpleFluxBoundaries = numSimpleFluxBoundaries + 1
          case(3,13,23)
             numExternalFluxBoundaries = numExternalFluxBoundaries + 1
-         case(4,24)
+         case(4,24,64)
             numInternalFluxBoundaries = numInternalFluxBoundaries + 1
          case(5,25)
             numInternalFluxBoundariesWithPipes = numInternalFluxBoundariesWithPipes + 1
@@ -979,7 +979,7 @@ do setIndex=0,numSets-1
          barlanht(fluxCount,1:nvell(fluxCount)) = externalFluxBoundaries(efCount)%barlanht
          barlancfsp(fluxCount,1:nvell(fluxCount)) = externalFluxBoundaries(efCount)%barlancfsp
          efCount = efCount + 1
-      case(4,24)  ! internal barrier boundary (e.g., subgrid scale levee)
+      case(4,24,64)  ! internal barrier boundary (e.g., subgrid scale levee)
          internalFluxBoundaries(ifCount)%indexNum = fluxCount
          ! get the node numbers on the boundary
          call xdmfRetrieveSetValues(xdmfFortranObj, setIndex, & 

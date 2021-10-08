@@ -657,14 +657,14 @@ C  This section for prep15
          ENDDO
       ENDDO
       !zc...If we're using time varying weirs, we need to
-      !     find out which processors have weir (4,24) boundaries
+      !     find out which processors have weir (4,24,64) boundaries
       !     in the case that we're not passing through PREP14
       IF(USE_TVW)THEN
         ALLOCATE(ISWEIR(1:NNODG))
         ISWEIR(:) = .FALSE.
         DO K=1,NBOU
             SELECT CASE(IBTYPE(K))
-                CASE(4,24,5,25)
+                CASE(4,24,64,5,25)
                     DO J=1,NVELL(K)
                         ISWEIR(NBVV(K,J))=.TRUE.
                         ISWEIR(IBCONNR(K,J))=.TRUE.
@@ -1282,7 +1282,7 @@ C
             select case(IBTYPE(K))
             !
             ! weir boundaries
-            case(4,24,5,25)
+            case(4,24,64,5,25)
                DO I = 1,NVELL(K)
                   INDX = NBVV(K,I)
                   INDEX2 = IBCONNR(K,I)
@@ -1491,7 +1491,7 @@ C     jgf46.21 Added support for IBTYPE=52.
                DISC = DISC + NVELLP(K)
             case(3,13,23)
                BBN = BBN + NVELLP(K)
-            case(4,24)
+            case(4,24,64)
                IBP = IBP + NVELLP(K)
             case(5,25)
                IBPPipe = IBPPipe + NVELLP(K)
@@ -1658,7 +1658,7 @@ C
                      WRITE(14,81) LABELS(IMAP_NOD_LG(NBVVP(K,I),IPROC)),
      &                            BAR1(K,INDX),BAR2(K,INDX)
                   ENDDO
-               case(4,24)
+               case(4,24,64)
                   IF(USE_TVW)NWEIRBNDRY(IPROC) = 1
                   DO I = 1,NVELLP(K)
                      INDX = LBINDEX_LG(K,I)
