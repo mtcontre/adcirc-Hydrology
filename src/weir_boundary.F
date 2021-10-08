@@ -2109,6 +2109,193 @@ C-----------------------------------------------------------------------
             END SUBROUTINE COMPUTE_INTERNAL_BOUNDARY_FLUX
 C-----------------------------------------------------------------------
 
+
+C-----------------------------------------------------------------------
+C     S U B R O U T I N E 
+C       C O M P U T E _ I N T E R N A L _ B O U N D A R Y 6 4 _ F L U X
+C-----------------------------------------------------------------------
+C     THIS SUBROUTINE CONTAINS THE CALCULATIONS OF OVERTOPPING FLUX
+C     PASSED BETWEEN THE THE WEIR PAIR NODES. THIS IS THE VERSION OF
+C     THE CODE THAT CHECKS IF THE WEIR HAS A WET EDGE BEFORE PASSING
+C     FLUX OVER THE WEIR.
+C     THIS IS A SUBROUTINE THAT WORKS WITH IBTYPE=64. THIS RETURNS ZERO
+C     WHEN A WEIR IS SUBMERGED ON BOTH SIDES. SB
+C-----------------------------------------------------------------------
+            SUBROUTINE COMPUTE_INTERNAL_BOUNDARY64_FLUX(
+     &          BARRIER_INDEX,BOUNDARYNODE,BOUNDARY,TIMELOC,FLUX)
+
+                USE BOUNDARIES,ONLY:BARINCFSB,BARINCFSP,
+     &              NVELL,IBCONN,BARINHT,ISSUBMERGED64
+                USE GLOBAL,ONLY:NIBNODECODE,TVW,USE_TVW,NODECODE
+                IMPLICIT NONE
+                INTEGER,INTENT(IN),TARGET   :: BARRIER_INDEX
+                INTEGER,INTENT(IN),TARGET   :: BOUNDARY
+                INTEGER,INTENT(IN),TARGET   :: BOUNDARYNODE
+                REAL(SZ),INTENT(IN)         :: TIMELOC
+                REAL(SZ),INTENT(OUT)        :: FLUX
+
+                INTEGER                     :: NNBB1,NNBB2
+                INTEGER                     :: NNBB1WN,NNBB2WN
+                INTEGER                     :: FLOWDIR
+                INTEGER,POINTER             :: I,J,K
+                REAL(SZ)                    :: RBARWL1,RBARWL2
+                REAL(SZ)                    :: RBARWL1F,RBARWL2F
+
+                CALL setMessageSource("COMPUTE_INTERNAL_BOUNDARY_FLUX")
+#if defined(WEIR_TRACE) || defined(ALL_TRACE) 
+                CALL allMessage(DEBUG,"Enter")
+#endif                
+
+
+C...............SIMPLIFY VARIABLES
+                I => BARRIER_INDEX
+                J => BOUNDARYNODE
+                K => BOUNDARY
+
+                NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
+                NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
+                NNBB1WN = 0      ! COUNT NUMBER OF WET NEIGHBORS
+                NNBB2WN = 0      ! COUNT NUMBER OF WET NEIGHBORS
+                FLOWDIR = 0      ! DIRECTION OF FLOW
+
+C...............CHECK TO SEE IF THERE IS A WET EDGE
+                IF( (J.EQ.1).OR.(J.EQ.NVELL(K)+1) )THEN
+                    NNBB1WN = NNBB1WN + NODECODE(NBV(I+1))
+                    NNBB2WN = NNBB2WN + NODECODE(IBCONN(I+1))
+                ELSE
+                    IF( J.EQ.NVELL(K).OR.(J.EQ.NVELL(K)*2) ) THEN
+                        NNBB1WN = NNBB1WN + NODECODE(NBV(I-1))
+                        NNBB2WN = NNBB2WN + NODECODE(IBCONN(I-1))
+                    ELSE
+                        NNBB1WN = NNBB1WN + NODECODE(NBV(I-1))
+                        NNBB1WN = NNBB1WN + NODECODE(NBV(I+1))
+                        NNBB2WN = NNBB2WN + NODECODE(IBCONN(I+1))
+                        NNBB2WN = NNBB2WN + NODECODE(IBCONN(I-1))
+                    ENDIF
+               ENDIF
+
+C..............CHECK TO SEE IF THE BARRIER ELEVATION NEEDS UPDATING
+               IF(INT_TVW)THEN
+                   IF(BAR_DEG(I))THEN
+                       CALL COMPUTE_BARRIER_HEIGHT(I,TIMELOC,BARINHT1(I)
+     &                  ,BARINHT2(I))
+                   ENDIF
+                   TVW(NNBB1) = BARINHT2(I)-BARINHT(I)
+               ENDIF
+
+C..............GET WATER LEVEL ABOVE WEIR ON EACH SIDE TO COMPUTE HEAD
+C              DEFINE COMPILER FLAG -DAVERAGEWEIRFLOW TO USE BARAVGWT,
+C              WHICH GENERALLY IS SET TO ZERO, AND IS HARD CODED
+C              TO ZERO HERE. READ_INPUT.F CONTAINS THE SPECIFICATION OF 
+C              BARAVGWT. WITH BARAVGWT SET TO ZERO, THERE IS NO NEED FOR
+C              IBSTART EITHER.
+#if AVERAGEWEIRFLOW
+               IF(IBSTART.EQ.0)THEN
+                  RBARWL1AVG(I)=ETA2(NNBB1)-BARINHT2(I)
+                  RBARWL2AVG(I)=ETA2(NNBB2)-BARINHT2(I)
+                  IBSTART=1
+               ELSE
+                  RBARWL1AVG(I)=(ETA2(NNBB1)-BARINHT2(I)+BARAVGWT
+     &                 *RBARWL1)/(1.D0+BARAVGWT)
+                  RBARWL2AVG(I)=(ETA2(NNBB2)-BARINHT2(I)+BARAVGWT
+     &                 *RBARWL2)/(1.D0+BARAVGWT)
+               ENDIF
+               RBARWL1=RBARWL1AVG(I)
+               RBARWL2=RBARWL2AVG(I)
+#else               
+C..............ZC - STREAMLINE THE PROCESS SINCE BARAVGWT IS ZERO BY DEFAULT
+               RBARWL1=ETA2(NNBB1)-BARINHT2(I)
+               RBARWL2=ETA2(NNBB2)-BARINHT2(I)
+#endif               
+               RBARWL1F=2.D0*RBARWL1/3.D0
+               RBARWL2F=2.D0*RBARWL2/3.D0
+               FLUX=0.D0
+               ISSUBMERGED64(I) = 0
+
+               IF((RBARWL1.GT.BARMIN).AND.(RBARWL2.GT.BARMIN)) THEN
+C...............THIS IS THE ONLY DIFFERENCE OF IBTYPE=64 FROM IBTYPE=24.
+C               WATER LEVEL ON BOTH SIDES OF BARRIER ABOVE BARRIER -> CASE 0
+                  FLUX = 0.D0
+                  ISSUBMERGED64(I) = 1
+               ELSEIF((RBARWL1.LT.0.D0).AND.(RBARWL2.LT.0.D0)) THEN
+C...............WATER LEVEL ON BOTH SIDES OF BARRIER BELOW BARRIER -> CASE 1
+                  FLUX=0.D0
+               ELSEIF(ABS(RBARWL1-RBARWL2).LT.0.01D0) THEN
+C...............WATER LEVEL EQUAL ON BOTH SIDES OF BARRIER
+C................TO WITHIN TOLERANCE BARMIN -> CASE 2
+                  FLUX=0.D0
+               ELSEIF((RBARWL1.GT.RBARWL2).AND.(RBARWL1.GT.BARMIN)) THEN
+C...............WATER LEVEL GREATER ON THIS SIDE OF THE BARRIER AND IS SUCH
+C................THAT OVERTOPPING IS OCCURING
+C................THUS THIS SIDE IS THE SOURCE SIDE OF THE FLOW ACROSS THE BARRIER
+C................NOTE THAT WE DO NOT FORCE THE SOURCE SIDE OF THE BARRIER TO
+C................REMAIN WET. ALSO WE CHECK TO SEE IF THE SOURCE SIDE OF THE
+C................BARRIER HAS BEEN DRIED. IF IT HAS WE SHUT DOWN THE FLOW ACROSS
+C................THE BARRIER
+C................ALSO WE CHECK TO SEE IF THE SOURCE SIDE OF THE BARRIER HAS AT
+C................LEAST ONE WET EDGE. IF NOT, WE SHUT DOWN THE FLOW ACROSS
+C................THE BARRIER. shintaro v46.28.sb05.05 11/01/2006
+                  IF(RBARWL2.GT.RBARWL1F) THEN
+C..................OUTWARD SUBCRITICAL FLOW -> CASE 3
+                     IF(NODECODE(NNBB1).EQ.0.OR.NNBB1WN.EQ.0) THEN
+                        FLUX=0.0D0
+                     ELSE
+                        FLUX=-RampIntFlux*RBARWL2*BARINCFSB(I)*
+     &                     (2.D0*G*(RBARWL1-RBARWL2))**0.5D0
+                     ENDIF
+                  ELSE
+C..................OUTWARD SUPERCRITICAL FLOW -> CASE 4
+                     IF(NODECODE(NNBB1).EQ.0.OR.NNBB1WN.EQ.0) THEN
+                        FLUX=0.0D0
+                     ELSE
+                        FLUX=-RampIntFlux*BARINCFSP(I)*RBARWL1F*
+     &                    (RBARWL1F*G)**0.5D0
+                     ENDIF
+                  ENDIF
+               ELSEIF((RBARWL2.GT.RBARWL1).AND.(RBARWL2.GT.BARMIN)) THEN
+C...............WATER LEVEL LOWER ON THIS SIDE OF BARRIER AND IS SUCH
+C................THAT OVERTOPPING IS OCCURING
+C................THUS THIS IS THE RECEIVING SIDE OF THE FLOW ACROSS THE BARRIER
+C................NOTE THAT WE DO FORCE THE RECEIVING SIDE OF THE BARRIER TO
+C................REMAIN WET WHEN THERE IS FLOW ACROSS THE BARRIER.
+C................ALSO WE CHECK TO SEE IF THE SOURCE SIDE OF THE
+C................BARRIER HAS BEEN DRIED. IF IT HAS, WE SHUT DOWN THE FLOW ACROSS
+C................THE BARRIER
+C................ALSO WE CHECK TO SEE IF THE SOURCE SIDE OF THE BARRIER HAS AT
+C................LEAST ONE WET EDGE. IF NOT, WE SHUT DOWN THE FLOW ACROSS
+C................THE BARRIER. shintaro v46.28.sb05.05 11/01/2006
+                  IF(RBARWL1.GT.RBARWL2F) THEN
+C..................INWARD SUBCRITICAL FLOW -> CASE 5
+                     IF(NODECODE(NNBB2).EQ.0.OR.NNBB2WN.EQ.0) THEN
+                        FLUX=0.0D0
+                     ELSE
+                        FLUX=RampIntFlux*RBARWL1*BARINCFSB(I)*
+     &                     (2.0D0*G*(RBARWL2-RBARWL1))**0.5D0
+                        NIBNODECODE(NNBB1)=1
+                     ENDIF
+                  ELSE
+C..................INWARD SUPERCRITICAL FLOW -> CASE 6
+                     IF(NODECODE(NNBB2).EQ.0.OR.NNBB2WN.EQ.0) THEN
+                        FLUX=0.0D0
+                     ELSE
+                        FLUX=RampIntFlux*BARINCFSP(I)*RBARWL2F*
+     &                     (RBARWL2F*G)**0.5D0
+                        NIBNODECODE(NNBB1)=1
+                     ENDIF
+                  ENDIF
+               ELSE
+                  FLUX=0
+               ENDIF
+               
+#if defined(WEIR_TRACE) || defined(ALL_TRACE) 
+               CALL allMessage(DEBUG,"Return")
+#endif
+               CALL unsetMessageSource()
+               RETURN
+C-----------------------------------------------------------------------
+            END SUBROUTINE COMPUTE_INTERNAL_BOUNDARY64_FLUX
+C-----------------------------------------------------------------------
+
 C-----------------------------------------------------------------------
 C     S U B R O U T I N E
 C       C O M P U T E _ C R O S S _ B A R R I E R _ P I P E _ F L U X

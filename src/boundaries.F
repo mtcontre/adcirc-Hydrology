@@ -34,6 +34,7 @@ C.....for internal barrier boundaries with flowthrough pipes
       REAL(SZ),ALLOCATABLE ::   BARINHT(:),BARINCFSB(:),BARINCFSP(:)
       REAL(SZ),ALLOCATABLE ::   PIPEHT(:),PIPECOEF(:),PIPEDIAM(:)
       INTEGER, ALLOCATABLE ::   IBCONN(:)
+      INTEGER, ALLOCATABLE ::   ISSUBMERGED64(:) ! used to identify submerged ibtype=64 weir  SB
       ! these arrays will only be needed temporarily, between reading 
       ! the ascii mesh file and initializing the boundaries
       REAL(SZ),ALLOCATABLE ::   BARLANHTR(:,:),BARLANCFSPR(:,:)
@@ -259,6 +260,7 @@ C     ---------
       allocate ( barinht(mnvel),barincfsb(mnvel),barincfsp(mnvel))
       allocate ( pipeht(mnvel),pipecoef(mnvel),pipediam(mnvel))
       allocate ( ibconn(mnvel))
+      allocate ( issubmerged64(mnvel))
       allocate ( nbvv(mnbou,0:mnvel))
       allocate ( bndlen2o3(mnvel))
       allocate ( ntran1(mnvel),ntran2(mnvel))
@@ -435,6 +437,7 @@ C     ------------------------------------------------------------------
       allocate ( barinht(mnvel),barincfsb(mnvel),barincfsp(mnvel))
       allocate ( pipeht(mnvel),pipecoef(mnvel),pipediam(mnvel))
       allocate ( ibconn(mnvel))  
+      allocate ( issubmerged64(mnvel))  
 
       allocate ( nbvv(mnbou,0:mnvel))
       allocate ( nvell(mnbou), ibtype(mnbou), ibtype_orig(mnbou))

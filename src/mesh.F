@@ -2393,6 +2393,7 @@
                   BARINCFSB(JGW)=BARINCFSBR(K,I)
                   BARINCFSP(JGW)=BARINCFSPR(K,I)
                ENDIF
+               ISSUBMERGED64(:) = 0
 
 !...........   LOAD INTERNAL BARRIER WITH PIPES BOUNDARY INFORMATION INTO
 !...........   THE CORRECT VECTORS
