@@ -157,6 +157,7 @@ C*******************************************************************************
      &     NNeigh, NeiTab, NeiTabEle, MJU, FDXE, FDYE,
      &     SWITCH_ELTAB_PERBC, SFacEle, SFMYEle, SFMXEle, TANPHI 
       USE BOUNDARIES, ONLY : NFLUXGBC, NVELME, ME2GW, NBV, LBCODEI,
+     &    NBOU, LBCODEI, NVELL, IBCONN, ISSUBMERGED64, NFLUXIB,
      &    CSII, SIII, NEleZNG, ZNGIF1, ZNGIF2, ZNGIF3                 
       USE NodalAttributes, ONLY: EVM,LoadAdvectionState,advectlocal,
      &     NOLIBF,
@@ -171,7 +172,7 @@ C----- END DW
 
       IMPLICIT NONE
 
-      INTEGER IE, I, J, N                           !local loop counters
+      INTEGER IE, I, J, K, N                           !local loop counters
       INTEGER  NM1, NM2, NM3
       INTEGER NC1, NC2, NC3, NCEle, NCI
       INTEGER NBDI
@@ -217,6 +218,9 @@ C..... DW
       REAL(8) :: SPNGCOEF_X, SPNGCOEF_Y
       REAL(SZ):: pr1_NM1, pr1_NM2, pr1_NM3
       REAL(SZ):: pr2_NM1, pr2_NM2, pr2_NM3
+C.....
+      INTEGER:: NNBB1, NNBB2
+      REAL(SZ):: fBUF
 C......DW
       call setMessageSource("mom_eqs_new_nc")
 #if defined(TIMESTEP_TRACE) || defined(ALL_TRACE)
@@ -884,6 +888,46 @@ C.....DW
 C...
 C...  SOLVE FOR VELOCITY AT NEW LEVEL  (s+1)
 C...
+
+CSB.. STITCH TOGETHER FULLY SUBMERGED IBTYPE=64 WEIR NODE PAIRS
+      IF(NFLUXIB.EQ.1) THEN
+         I = 0                         
+         DO K = 1, NBOU
+            SELECT CASE(LBCODEI(I+1))
+                CASE(64)
+                    DO J = 1,NVELL(K)
+                        I = I + 1
+                        IF(ISSUBMERGED64(I).NE.0) THEN
+                           NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
+                           NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
+                           fBUF = AUV(1,NNBB1) + AUV(1,NNBB2)
+                           AUV(1,NNBB1) = fBUF
+                           AUV(1,NNBB2) = fBUF
+                           fBUF = AUV(2,NNBB1) + AUV(2,NNBB2)
+                           AUV(2,NNBB1) = fBUF
+                           AUV(2,NNBB2) = fBUF
+                           fBUF = AUV(3,NNBB1) + AUV(3,NNBB2)
+                           AUV(3,NNBB1) = fBUF
+                           AUV(3,NNBB2) = fBUF
+                           fBUF = AUV(4,NNBB1) + AUV(4,NNBB2)
+                           AUV(4,NNBB1) = fBUF
+                           AUV(4,NNBB2) = fBUF
+                           fBUF = MOM_LV_X(NNBB1) + MOM_LV_X(NNBB2)
+                           MOM_LV_X(NNBB1) = fBUF
+                           MOM_LV_X(NNBB2) = fBUF
+                           fBUF = MOM_LV_Y(NNBB1) + MOM_LV_Y(NNBB2)
+                           MOM_LV_Y(NNBB1) = fBUF
+                           MOM_LV_Y(NNBB2) = fBUF
+                        ENDIF
+                     ENDDO
+                     I = I + NVELL(K)
+                  CASE(4,24,5,25)
+                     I = I + NVELL(K)*2
+                  CASE DEFAULT
+                     I = I + NVELL(K)
+            END SELECT    
+         ENDDO 
+      ENDIF
 
 C.....Note: This includes the comparison between MJU and NODELE to
 C.....determine if the node is an interface node.  If MJU < NODELE the

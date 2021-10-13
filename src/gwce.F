@@ -232,7 +232,8 @@ C
      &   QN1, EN1, QN0, ElevDisc, QN2, EN0, iLump, BCFLAG_LNM, EN2,
      &   TKM, NPERSEG, NTIP, NNPERBC, IPERCONN, VIDispDXOH, Bd, Ad, Cs2,
      &   VIDispDYOH, IFSFM, IFNL_HDP, CGWCE_HDP, CAliDisp, 
-     &   usingDynamicWaterLevelCorrection, dynamicWaterLevelCorrection1
+     &   usingDynamicWaterLevelCorrection, dynamicWaterLevelCorrection1,
+     &   COEFDTemp
 #ifdef CMPI
      &    , dumy1, dumy2, rnp_global
 #endif
@@ -241,7 +242,8 @@ C
      &   SWITCH_ELTAB_PERBC, SFacEle, SFMYEle, SFMXEle, SFCXEle,
      &   SFCYEle, YCSFacEle, TANPHI, SFCT, TANPHIEle
       USE BOUNDARIES, ONLY : NETA, NFLUXF, NFLUXB, NFLUXGBC, NFLUXIB, 
-     &   NFLUXRBC, NOPE, NVEL, NBD, NBV, LBCODEI, BndLen2O3, NPEBC
+     &   NFLUXRBC, NOPE, NVEL, NBD, NBOU, NVELL, NBV, IBCONN, ISSUBMERGED64,
+     &   LBCODEI, BndLen2O3, NPEBC
       USE ITPACKV
       USE NodalAttributes, ONLY :
      &     LoadGeoidOffset, GeoidOffset, EVM, NOLIBF,
@@ -262,7 +264,7 @@ C... DW
 
       IMPLICIT NONE
 
-      INTEGER IE, JN, IJ, I, J                           !local loop counters
+      INTEGER IE, JN, IJ, I, J, K                         !local loop counters
       INTEGER IT
       INTEGER NM1, NM2, NM3, NMI1, NMI2, NMI3, NMJ1, NMJ2, NMJ3
       INTEGER NC1, NC2, NC3, NCEle, NCI, NCJ
@@ -341,6 +343,9 @@ C...... DW
       REAL(SZ) :: SPM1, SPM2, SPM3 
       LOGICAL :: ETA_SPONGE = .false., GWCE_SPONGE = .false.
       REAL(SZ) :: Ma2, Cfac = 1.0_SZ, CfacS0 = 1.0_SZ
+C.....
+      INTEGER :: NNBB1, NNBB2
+      REAL(SZ):: fBuf
       
       IF ( LoadAbsLayerSigma ) THEN
          IF (NumNodesAbsLayer(1) > 0 ) ETA_SPONGE = .true.
@@ -1577,8 +1582,7 @@ C...Note 3, Eta1 is the latest computed elevation (it was updated above).
      &     .OR.(NFLUXGBC.EQ.1).OR.(NFLUXRBC.EQ.1)) THEN
          NBDJ=NBV(1)
          IF ((LBCODEI(1).LE.29).OR.(LBCODEI(1).EQ.64))
-     &        QFORCEJ=(QN2(1)-QN0(1))/DT2 +
-     &          Tau0VAR(NBDJ)*QN1(1)
+     &        QFORCEJ=(QN2(1)-QN0(1))/DT2 + Tau0VAR(NBDJ)*QN1(1)
 
          IF (LBCODEI(1).EQ.30) THEN
             H1=DP(NBDJ)+IFNLFA*ETA1(NBDJ)
@@ -1620,8 +1624,7 @@ C
             QFORCEI=QFORCEJ
 
             IF((LBCODEI(J).LE.29).OR.(LBCODEI(J).EQ.64)) 
-     &           QFORCEJ=(QN2(J)-QN0(J))/DT2+
-     &             Tau0VAR(NBDJ)*QN1(J)
+     &           QFORCEJ=(QN2(J)-QN0(J))/DT2 + Tau0VAR(NBDJ)*QN1(J)
             IF(LBCODEI(J).EQ.30) THEN
                H1=DP(NBDJ)+IFNLFA*ETA1(NBDJ)
                CELERITY=SQRT(G*H1)
@@ -1717,6 +1720,35 @@ C... DW, periodic bcs
       if (subdomainOn.and.enforceBN.eq.2) call enforceEib() ! NCSU Subdomain
       if (subdomainOn.and.enforceBN.eq.2) call enforceGWCELVob() ! NCSU Subdomain
 
+CSB.. STITCH TOGETHER FULLY SUBMERGED IBTYPE=64 WEIR NODE PAIRS
+      COEFDTemp(:) = COEFD(:)
+      IF((NFLUXIB.EQ.1).AND.(ILump.NE.0)) THEN
+         I = 0                         
+         DO K = 1, NBOU
+            SELECT CASE(LBCODEI(I+1))
+                CASE(64)
+                    DO J = 1,NVELL(K)
+                        I = I + 1
+                        IF(ISSUBMERGED64(I).NE.0) THEN
+                           NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
+                           NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
+                           fBUF = COEFD(NNBB1) + COEFD(NNBB2)
+                           COEFDTemp(NNBB1) = fBUF
+                           COEFDTemp(NNBB2) = fBUF
+                           fBUF = GWCE_LV(NNBB1) + GWCE_LV(NNBB2)
+                           GWCE_LV(NNBB1) = fBUF
+                           GWCE_LV(NNBB2) = fBUF
+                        ENDIF
+                     ENDDO
+                     I = I + NVELL(K)
+                  CASE(4,24,5,25)
+                     I = I + NVELL(K)*2
+                  CASE DEFAULT
+                     I = I + NVELL(K)
+            END SELECT
+         ENDDO
+      ENDIF
+
       IF (ILump.eq.0) THEN ! default, fully consistent LHS
 C...  JCG ITERATIVE MATRIX SOLVER
          IPARM(1)=ITMAX
@@ -1728,10 +1760,10 @@ C...  JCG ITERATIVE MATRIX SOLVER
          END DO
       ELSE ! lumped LHS
          DO I = 1, NP
-            IF (COEFD(I).eq.0.0d0) THEN
+            IF (COEFDTemp(I).eq.0.0d0) THEN
                RDIAG = 0.0d0
             ELSE
-               RDIAG = 1.0d0 / COEFD(I)
+               RDIAG = 1.0d0 / COEFDTemp(I)
             ENDIF
             ETAS(I) = GWCE_LV(I) * RDIAG
          ENDDO

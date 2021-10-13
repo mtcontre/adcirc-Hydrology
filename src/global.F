@@ -374,6 +374,7 @@ Cobell -  Added the following for output of ESL at end of run
       REAL(SZ),ALLOCATABLE ::   SALTAMP(:,:),SALTPHA(:,:)
       REAL(SZ),ALLOCATABLE ::   OBCCOEF(:,:),COEF(:,:)
       REAL(SZ),ALLOCATABLE ::   COEFD(:) !jgf48.4619 from Seizo (Lumped GWCE)
+      REAL(SZ),ALLOCATABLE ::   COEFDTemp(:) 
       INTEGER :: NBFR, NCOR
 C    kmd48.33bc - added variables for the levels of no motion and top temperature boundary condition
       REAL(SZ),ALLOCATABLE ::   LNM_BC1(:), LNM_BC2(:), LNM_BC(:) ! level of no motion
@@ -1398,8 +1399,9 @@ C...
       USE SIZES, ONLY : MNP
       IMPLICIT NONE
 C     jgf48.4619: Array used in lumped GWCE (from Seizo)
-      ALLOCATE( COEFD(MNP) )
+      ALLOCATE( COEFD(MNP),COEFDTemp(MNP) )
       coefd = -99999.d0
+      coefdtemp = -99999.d0
       RETURN
       END SUBROUTINE ALLOC_MAIN11_LUMPED
 

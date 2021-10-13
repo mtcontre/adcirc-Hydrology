@@ -2387,7 +2387,8 @@
                ENDIF
 
 !...........   LOAD INTERNAL BARRIER BOUNDARY INFORMATION INTO THE CORRECT VECTORS
-               IF((IBTYPE(K).EQ.4).OR.(IBTYPE(K).EQ.24).OR.(IBTYPE(K).EQ.64)) THEN
+               IF((IBTYPE(K).EQ.4).OR.(IBTYPE(K).EQ.24).OR.
+     &            (IBTYPE(K).EQ.64)) THEN
                   IBCONN(JGW)=IBCONNR(K,I)
                   BARINHT(JGW)=BARINHTR(K,I)
                   BARINCFSB(JGW)=BARINCFSBR(K,I)

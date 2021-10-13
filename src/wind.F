@@ -872,7 +872,8 @@ C----------------------------------------------------------------------
      &   sponge, res_bc_flag, IDEN, SigTS, cice1, cice2, IFSPROTS
       use spongelayer, only : RampMetInSponge ! sb20210913
       use nodalAttributes, only : applyDirectionalWindReduction,
-     &   loadCanopyCoef, loadDirEffRLen, applyCanopyCoefficient
+     &   loadCanopyCoef, loadDirEffRLen, applyCanopyCoefficient,
+     &   LoadAbsLayerSigma, FoundAbsLayerSigma
       use mesh, only : dp, ics, np, uvectmp, vvectmp, DRVMAP2DSPVEC
 #ifdef ADCNETCDF
       USE OWIWIND_NETCDF, ONLY: NWS13GET
@@ -920,7 +921,11 @@ C     No wind, radiation stress or atmospheric pressure forcings are used.
       IF(NWS.EQ.1) THEN
          DO I=1,NP
             READ(22,*) NHG,WSX2(I),WSY2(I),PR2(I) !read in
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I)=RampMete*RampSponge*WSX2(I) ! apply ramp function
             WSY2(I)=RampMete*RampSponge*WSY2(I)
 C  tcm v49.16 20100617
@@ -951,7 +956,11 @@ C     pressure information with the model time step.
          DO I=1,NP
             WindX = WVNX1(I) + WTRatio*(WVNX2(I)-WVNX1(I))
             WindY = WVNY1(I) + WTRatio*(WVNY2(I)-WVNY1(I))
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*WindX !apply ramp
             WSY2(I) = RampMete*RampSponge*WindY
 C  tcm v49.16 20100617
@@ -998,7 +1007,11 @@ C    TCM V49.64.01 ADDED ICE EFFECTS ON WIND DRAG COEFF
             IF(NCICE.NE.0) THEN
                WDragCo = WindIceDrag(WDragCo,ciceout(i))
             ENDIF
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*
      &                airwaterdensityrat*WDragCo*WindX*WindMag
             WSY2(I) = RampMete*RampSponge*
@@ -1043,7 +1056,11 @@ C    TCM V49.64.01 ADDED ICE EFFECTS ON WIND DRAG COEFF
             IF(NCICE.NE.0) THEN
                WDragCo = WindIceDrag(WDragCo,ciceout(i))
             ENDIF
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*
      &                airwaterdensityrat*WDragCo*WindX*WindMag
             WSY2(I) = RampMete*RampSponge*
@@ -1093,7 +1110,11 @@ C    TCM V49.64.01 ADDED ICE EFFECTS ON WIND DRAG COEFF
             IF(NCICE.NE.0) THEN
                WDragCo = WindIceDrag(WDragCo,ciceout(i))
             ENDIF
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*
      &                airwaterdensityrat*WDragCo*WindX*WindMag
             WSY2(I) = RampMete*RampSponge*
@@ -1147,7 +1168,11 @@ C    TCM V49.64.01 ADDED ICE EFFECTS ON WIND DRAG COEFF
             IF(NCICE.NE.0) THEN
                WDragCo = WindIceDrag(WDragCo,ciceout(i))
             ENDIF
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*
      &                airwaterdensityrat*WDragCo*WindX*WindMag
             WSY2(I) = RampMete*RampSponge*
@@ -1184,7 +1209,11 @@ C     model time step.
          DO I=1,NP
             WindX = WVNX1(I) + WTRatio*(WVNX2(I)-WVNX1(I))
             WindY = WVNY1(I) + WTRatio*(WVNY2(I)-WVNY1(I))
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*WindX !apply ramp
             WSY2(I) = RampMete*RampSponge*WindY
 C  tcm v49.16 20100617
@@ -1219,7 +1248,11 @@ C    TCM V49.64.01 ADDED ICE EFFECTS ON WIND DRAG COEFF
             IF(NCICE.NE.0) THEN
                WDragCo = WindIceDrag(WDragCo,ciceout(i))
             ENDIF
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*
      &                airwaterdensityrat*WDragCo*WindX*WindMag
             WSY2(I) = RampMete*RampSponge*
@@ -1278,7 +1311,11 @@ C    TCM V49.64.01 ADDED ICE EFFECTS ON WIND DRAG COEFF
             ELSEIF (NCICE.NE.0) THEN
                WDragCo = WindIceDrag(WDragCo,ciceout(i))
             ENDIF
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*
      &                airwaterdensityrat*WDragCo*WindX*WindMag
             WSY2(I) = RampMete*RampSponge*
@@ -1335,7 +1372,11 @@ C    TCM V49.64.01 ADDED ICE EFFECTS ON WIND DRAG COEFF
             IF(NCICE.NE.0) THEN
                WDragCo = WindIceDrag(WDragCo,ciceout(i))
             ENDIF
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*
      &                airwaterdensityrat*WDragCo*WindX*WindMag
             WSY2(I) = RampMete*RampSponge*
@@ -1449,7 +1490,11 @@ C    TCM V49.64.01 ADDED ICE EFFECTS ON WIND DRAG COEFF
                   airwaterdensityrat = rhoAir/(SigTS(I) + RhoWat0)
                endif
             endif
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*
      &                airwaterdensityrat*WDRAGCO*WINDX*WINDMAG
             WSY2(I) = RampMete*RampSponge*
@@ -1501,7 +1546,11 @@ Casey 180318: Added for NWS=13, ARC modified 190108
             IF(NCICE.NE.0) THEN
                WDragCo = WindIceDrag(WDragCo,ciceout(i))
             ENDIF
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*
      &                0.001293d0*WDRAGCO*WINDX*WINDMAG
             WSY2(I) = RampMete*RampSponge*
@@ -1533,7 +1582,11 @@ C     RJW ffpl Merged:
             ENDIF
             IF (LoadCanopyCoef)
      &         CALL ApplyCanopyCoefficient(I,WindX,WindY)
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*
      &                airwaterdensityrat*WDragCo*WindX*WindMag
             WSY2(I) = RampMete*RampSponge*
@@ -1567,7 +1620,11 @@ C     jie added nws = 20: generalized asymmetric vortex model
             ENDIF
             IF (LoadCanopyCoef)
      &         CALL ApplyCanopyCoefficient(I,WindX,WindY)
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*
      &                airwaterdensityrat*WDragCo*WindX*WindMag
             WSY2(I) = RampMete*RampSponge*
@@ -1621,7 +1678,11 @@ C     NWS19 into an OWI basin scale met field from NWS12 (derived from NAM).
             ! jgf49.1001 NAM winds already contain wind reduction
             IF (LoadCanopyCoef)
      &         CALL ApplyCanopyCoefficient(I,WindX,WindY)
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*
      &                airwaterdensityrat*WDRAGCO*WINDX*WINDMAG
             WSY2(I) = RampMete*RampSponge*
@@ -1685,7 +1746,11 @@ C     NWS19 into an OWI basin scale met field from NWS12 (derived from NAM).
             IF(NCICE.NE.0) THEN
                WDragCo = WindIceDrag(WDragCo,ciceout(i))
             ENDIF
-             RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
              WSX2(I) = RampMete*RampSponge*
      &                 airwaterdensityrat*WDRAGCO*WINDX*WINDMAG
              WSY2(I) = RampMete*RampSponge*
@@ -1728,7 +1793,11 @@ C    TCM V49.64.01 ADDED ICE EFFECTS ON WIND DRAG COEFF
             IF(NCICE.NE.0) THEN
                WDragCo = WindIceDrag(WDragCo,ciceout(i))
             ENDIF
-            RampSponge = RampMetInSponge(I) !sb20210913
+            IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
+               RampSponge = RampMetInSponge(I)
+            ELSE
+               RampSponge = 1.D0
+            ENDIF
             WSX2(I) = RampMete*RampSponge*
      &                airwaterdensityrat*WDRAGCO*WINDX*WINDMAG
             WSY2(I) = RampMete*RampSponge*
