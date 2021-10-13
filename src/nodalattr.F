@@ -103,6 +103,15 @@ Corbitt 120321: Allow Advection to be Turned on Locally instead of Globally
       INTEGER              :: AdvectionStateNoOfVals
       REAL(SZ)             :: AdvectionStateDefVal
       REAL(SZ),ALLOCATABLE :: AdvectionState(:)
+C     Specify node pairs for smoothing by averaging. Inteded to be used
+C     combined with IBTYPE=64 weir boundaries for very narrow channels
+C     to avoid CFL condition violation
+      LOGICAL              :: LoadSmoothingNodePairs
+      LOGICAL              :: FoundSmoothingNodePairs
+      CHARACTER(LEN=80)    :: SmoothingNodePairsUnits
+      INTEGER              :: SmoothingNodePairsNoOfVals
+      REAL(SZ)             :: SmoothingNodePairsDefVal
+      REAL(SZ),ALLOCATABLE :: SmoothingNodePairs(:)
 C
 C     The following flags are .true. if the corresponding data are
 C     required for the run, according to the unit 15 control file
@@ -362,6 +371,11 @@ Corbitt 120321:
       AdvectionStateNoOfVals = 1
       AdvectionStateDefVal   = 0.D0
 C
+      LoadSmoothingNodePairs     = .False.
+      FoundSmoothingNodePairs    = .FALSE.
+      SmoothingNodePairsNoOfVals = 1
+      SmoothingNodePairsDefVal   = 0.D0
+C
       LoadTau0           = .False.
       LoadStartDry       = .False.
       LoadDirEffRLen     = .False.
@@ -611,6 +625,8 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
 Corbitt 120321: Allow advection to be turned on locally instead of globally
          CASE("advection_state")
             FoundAdvectionState = .TRUE.
+         CASE("smoothing_node_pairs")
+            FoundSmoothingNodePairs = .TRUE.
          CASE("elemental_slope_limiter")
             FoundEleSlopeLim = .TRUE.
          CASE("initial_river_elevation")            
@@ -769,6 +785,10 @@ Corbitt 120321: Allow Advection to be handled locally instead of globally.
             IF (LoadAdvectionState) THEN
                advectionState = na(i)%xdmfArray
             ENDIF
+         CASE("smoothing_node_pairs")
+            IF (LoadSmoothingNodePairs) THEN
+               SmoothingNodePairs = na(i)%xdmfArray
+            ENDIF
          CASE("elemental_slope_limiter")
             IF( LoadEleSlopeLim ) THEN
                 elemental_slope_limiter_grad_max = na(i)%xdmfArray
@@ -839,6 +859,7 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
      &   ((LoadSwanWaveRefrac).and.(.not.FoundSwanWaveRefrac)).or.
 Corbitt 120321: Allow advection to be turned on locally instead of globally
      &   ((LoadAdvectionState).and.(.not.FoundAdvectionState)).or.
+     &   ((LoadSmoothingNodePairs).and.(.not.FoundSmoothingNodePairs)).or.
      &   ((LoadEleSlopeLim).and.(.not.FoundEleSlopeLim)).or.
      &   ((LoadRiver_et_WSE).and.(.not.FoundRiver_et_WSE)).or.     
      &   ((LoadIT_Fric).and.(.not.FoundIT_Fric)).or. 
@@ -882,6 +903,7 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
       ALLOCATE(SwanWaveRefrac(NumOfNodes))
 Corbitt 120321: Allow advection to be turned on locally instead of globally
       ALLOCATE(AdvectionState(NumOfNodes))
+      ALLOCATE(SmoothingNodePairs(NumOfNodes))
       ALLOCATE(River_et_WSE(NumOfNodes))  ! tcm 20140502 v51.27
       ALLOCATE(OverlandReductionFactor(NumOfNodes))
       ALLOCATE(elemental_slope_limiter_grad_max(NumOfNodes))
@@ -1003,6 +1025,8 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
 Corbitt 120321: Allow advection to be turned on locally instead of globally
          CASE("advection_state")
             LoadAdvectionState = .True.
+         CASE("smoothing_node_paris")
+            LoadSmoothingNodePairs = .True.
          CASE("elemental_slope_limiter")
             LoadEleSlopeLim = .TRUE.
          CASE("initial_river_elevation")  ! tcm 20140502 v51.27
@@ -1183,6 +1207,11 @@ Corbitt 120321: Allow advection to be turned on locally instead of globally
             READ(13,'(A80)') AdvectionStateUnits
             READ(13,*) AdvectionStateNoOfVals
             READ(13,*) AdvectionStateDefVal
+         CASE("smoothing_node_pairs")
+            FoundSmoothingNodePairs = .TRUE.
+            READ(13,'(A80)') SmoothingNodePairsUnits
+            READ(13,*) SmoothingNodePairsNoOfVals
+            READ(13,*) SmoothingNodePairsDefVal
          CASE("elemental_slope_limiter")
             FoundEleSlopeLim = .TRUE.
             READ(13,'(A80)') EleSlopeLimUnits
@@ -1351,6 +1380,13 @@ Corbitt 120321: Allow Advection to be handled locally instead of globally.
          CASE("advection_state")
             IF (LoadAdvectionState) THEN
                CALL LoadAttrVec(AdvectionState,AdvectionStateDefVal,
+     &              NumNodesNotDefault, NScreen, MyProc, NAbOut)
+            ELSE
+               SkipDataSet = .TRUE.
+            ENDIF
+         CASE("smoothing_node_pairs")
+            IF (LoadSmoothingNodePairs) THEN
+               CALL LoadAttrVec(SmoothingNodePairs,SmoothingNodePairsDefVal,
      &              NumNodesNotDefault, NScreen, MyProc, NAbOut)
             ELSE
                SkipDataSet = .TRUE.
