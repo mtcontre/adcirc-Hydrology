@@ -128,7 +128,8 @@ CWET...
       use mesh, only : ne, np, dp, mju, totalArea, nm, x, y, areas
       use nodalattributes, only : BFCdLLimit, fgamma, ftheta, fric,
      &   manningsn, hbreak, ifhybf, ifnlbf, iflinbf, loadManningsN,
-     &   loadZ0B_var, z0b_var
+     &   loadZ0B_var, z0b_var,
+     &   loadSmoothingNodePairs,SmoothingNodePairs
       use global_3dvs, only : a, b, islip, kp, z0b, sigma, evtot, q
       use subdomain, only : subdomainOn, enforceBN, enforceWDcb, enforceWDob
       implicit none
@@ -150,7 +151,7 @@ CWET...
       real(sz) :: htot
       real(sz) :: h1
       integer :: nbnctot
-      integer :: i
+      integer :: i,j
       integer :: ie
 
       if (nolifa.ne.2) then
@@ -947,6 +948,22 @@ CWET...
 CWET...
 CWET...END WET/DRY SECTION  - PART 3
 CWET...
+
+C.... Setting the same nodecode value to each smoothing node pair
+      IF(LoadSmoothingNodePairs) THEN
+         DO I=1,NP
+            IF(SmoothingNodePairs(I).gt.0) THEN
+               J = SmoothingNodePairs(I)
+               IF(NNODECODE(I).NE.NNODECODE(J)) THEN
+                  IF(NNODECODE(I).NE.NODECODE(I)) THEN
+                     NNODECODE(J) = NNODECODE(I)
+                  ELSE
+                     NNODECODE(I) = NNODECODE(J)
+                  ENDIF
+               ENDIF
+            ENDIF
+         ENDDO
+      ENDIF
 
 CWET...
 CWET...START WET/DRY SECTION PART 4 - NODAL DRYING LOOP D2

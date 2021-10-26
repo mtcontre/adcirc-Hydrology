@@ -1025,7 +1025,7 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
 Corbitt 120321: Allow advection to be turned on locally instead of globally
          CASE("advection_state")
             LoadAdvectionState = .True.
-         CASE("smoothing_node_paris")
+         CASE("smoothing_node_pairs")
             LoadSmoothingNodePairs = .True.
          CASE("elemental_slope_limiter")
             LoadEleSlopeLim = .TRUE.

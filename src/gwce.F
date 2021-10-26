@@ -249,11 +249,10 @@ C
      &     LoadGeoidOffset, GeoidOffset, EVM, NOLIBF,
      &     TAU0VAR, HighResTimeVaryingTau0, FullDomainTimeVaryingTau0,
      &     CalculateTimeVaryingTau0, LoadAdvectionState, advectlocal,
-C... DW
      &     LoadAbsLayerSigma, absorblayer_sigma_eta,
-     &     absorblayer_sigma_mnx, absorblayer_sigma_mny
+     &     absorblayer_sigma_mnx, absorblayer_sigma_mny,
+     &     LoadSmoothingNodePairs, SmoothingNodePairs
       USE SPONGELAYER
-C... DW
 
 #ifdef CMPI
       USE MESSENGER
@@ -1721,6 +1720,7 @@ C... DW, periodic bcs
       if (subdomainOn.and.enforceBN.eq.2) call enforceGWCELVob() ! NCSU Subdomain
 
 CSB.. STITCH TOGETHER FULLY SUBMERGED IBTYPE=64 WEIR NODE PAIRS
+C     (1) FRONT SIDE TO BACK SIDE
       COEFDTemp(:) = COEFD(:)
       IF((NFLUXIB.EQ.1).AND.(ILump.NE.0)) THEN
          I = 0                         
@@ -1732,12 +1732,64 @@ CSB.. STITCH TOGETHER FULLY SUBMERGED IBTYPE=64 WEIR NODE PAIRS
                         IF(ISSUBMERGED64(I).NE.0) THEN
                            NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
                            NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
-                           fBUF = COEFD(NNBB1) + COEFD(NNBB2)
-                           COEFDTemp(NNBB1) = fBUF
-                           COEFDTemp(NNBB2) = fBUF
-                           fBUF = GWCE_LV(NNBB1) + GWCE_LV(NNBB2)
-                           GWCE_LV(NNBB1) = fBUF
-                           GWCE_LV(NNBB2) = fBUF
+                           ! fBUF = COEFD(NNBB1) + COEFD(NNBB2)
+                           ! COEFDTemp(NNBB1) = fBUF
+                           ! COEFDTemp(NNBB2) = fBUF
+                           ! fBUF = GWCE_LV(NNBB1) + GWCE_LV(NNBB2)
+                           ! GWCE_LV(NNBB1) = fBUF
+                           ! GWCE_LV(NNBB2) = fBUF
+                           COEFDTemp(NNBB2) =
+     &                       2.D0 * COEFD(NNBB1) + COEFD(NNBB2)
+                           GWCE_LV(NNBB2) =
+     &                       2.D0 * GWCE_LV(NNBB1) + GWCE_LV(NNBB2)
+                           ETA1(NNBB2) =
+     &                       ( ETA1(NNBB1) + ETA1(NNBB2) ) * 0.5D0
+                        ENDIF
+                     ENDDO
+                     I = I + NVELL(K)
+                  CASE(4,24,5,25)
+                     I = I + NVELL(K)*2
+                  CASE DEFAULT
+                     I = I + NVELL(K)
+            END SELECT
+         ENDDO
+      ENDIF
+
+C.... Smoothing the values at specified node pairs by taking average
+      IF(LoadSmoothingNodePairs) THEN
+         DO I=1,NP
+            IF(SmoothingNodePairs(I).gt.0) THEN
+               J = SmoothingNodePairs(I)
+               IF((NODECODE(I)).NE.0.AND.(NODECODE(J).NE.0)) THEN
+                  fBUF = COEFDTemp(I) + COEFDTemp(J)
+                  COEFDTemp(I) = fBUF
+                  COEFDTemp(J) = fBUF
+                  fBUF = GWCE_LV(I) + GWCE_LV(J)
+                  GWCE_LV(I) = fBUF
+                  GWCE_LV(J) = fBUF
+                  fBUF = ( ETA1(I) + ETA1(J) ) * 0.5D0
+                  ETA1(I) = fBUF
+                  ETA1(J) = fBUF
+               ENDIF
+            ENDIF
+         ENDDO
+      ENDIF
+
+CSB.. STITCH TOGETHER FULLY SUBMERGED IBTYPE=64 WEIR NODE PAIRS
+C     (2) BACK SIDE TO FRONT SIDE
+      IF((NFLUXIB.EQ.1).AND.(ILump.NE.0)) THEN
+         I = 0                         
+         DO K = 1, NBOU
+            SELECT CASE(LBCODEI(I+1))
+                CASE(64)
+                    DO J = 1,NVELL(K)
+                        I = I + 1
+                        IF(ISSUBMERGED64(I).NE.0) THEN
+                           NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
+                           NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
+                           COEFDTemp(NNBB1) = COEFDTemp(NNBB2)
+                           GWCE_LV(NNBB1) = GWCE_LV(NNBB2)
+                           ETA1(NNBB1) = ETA1(NNBB2)
                         ENDIF
                      ENDDO
                      I = I + NVELL(K)
@@ -1778,6 +1830,20 @@ C...... DW, periodic bcs
 C     Switch back to the original element table 
       CALL SWITCH_ELTAB_PERBC( IDIREC = 2 ) ;
 C......
+
+! C.... Smoothing the values at specified node pairs by taking average
+!       IF(LoadSmoothingNodePairs) THEN
+!          DO I=1,NP
+!             IF(SmoothingNodePairs(I).gt.0) THEN
+!                J = SmoothingNodePairs(I)
+!                IF((NODECODE(I)).NE.0.AND.(NODECODE(J).NE.0)) THEN
+!                   fBuf = ( ETA2(I) + ETA2(J) ) * 0.5D0
+!                   ETA2(I) = fBuf
+!                   ETA2(J) = fBuf
+!                ENDIF
+!             ENDIF
+!          ENDDO
+!       ENDIF
 
 #ifdef CMPI
       CALL UPDATER(ETA2,DUMY1,DUMY2,1)

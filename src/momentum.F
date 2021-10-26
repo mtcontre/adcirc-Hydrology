@@ -161,10 +161,9 @@ C*******************************************************************************
      &    CSII, SIII, NEleZNG, ZNGIF1, ZNGIF2, ZNGIF3                 
       USE NodalAttributes, ONLY: EVM,LoadAdvectionState,advectlocal,
      &     NOLIBF,
-C----- DW: begin !c absorbing layer
      &     LoadAbsLayerSigma, absorblayer_sigma_eta,
-     &     absorblayer_sigma_mnx, absorblayer_sigma_mny
-C----- END DW
+     &     absorblayer_sigma_mnx, absorblayer_sigma_mny,
+     &     LoadSmoothingNodePairs, SmoothingNodePairs
       USE SUBDOMAIN, ONLY : subdomainOn, enforceBN, enforceUVOB, 
      &                       enforceUVCB
       USE SPONGELAYER
@@ -890,6 +889,7 @@ C...  SOLVE FOR VELOCITY AT NEW LEVEL  (s+1)
 C...
 
 CSB.. STITCH TOGETHER FULLY SUBMERGED IBTYPE=64 WEIR NODE PAIRS
+C     (1) FRONT SIDE TO BACK SIDE
       IF(NFLUXIB.EQ.1) THEN
          I = 0                         
          DO K = 1, NBOU
@@ -900,24 +900,90 @@ CSB.. STITCH TOGETHER FULLY SUBMERGED IBTYPE=64 WEIR NODE PAIRS
                         IF(ISSUBMERGED64(I).NE.0) THEN
                            NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
                            NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
-                           fBUF = AUV(1,NNBB1) + AUV(1,NNBB2)
-                           AUV(1,NNBB1) = fBUF
-                           AUV(1,NNBB2) = fBUF
-                           fBUF = AUV(2,NNBB1) + AUV(2,NNBB2)
-                           AUV(2,NNBB1) = fBUF
-                           AUV(2,NNBB2) = fBUF
-                           fBUF = AUV(3,NNBB1) + AUV(3,NNBB2)
-                           AUV(3,NNBB1) = fBUF
-                           AUV(3,NNBB2) = fBUF
-                           fBUF = AUV(4,NNBB1) + AUV(4,NNBB2)
-                           AUV(4,NNBB1) = fBUF
-                           AUV(4,NNBB2) = fBUF
-                           fBUF = MOM_LV_X(NNBB1) + MOM_LV_X(NNBB2)
-                           MOM_LV_X(NNBB1) = fBUF
-                           MOM_LV_X(NNBB2) = fBUF
-                           fBUF = MOM_LV_Y(NNBB1) + MOM_LV_Y(NNBB2)
-                           MOM_LV_Y(NNBB1) = fBUF
-                           MOM_LV_Y(NNBB2) = fBUF
+                           ! fBUF = AUV(1,NNBB1) + AUV(1,NNBB2)
+                           ! AUV(1,NNBB1) = fBUF
+                           ! AUV(1,NNBB2) = fBUF
+                           ! fBUF = AUV(2,NNBB1) + AUV(2,NNBB2)
+                           ! AUV(2,NNBB1) = fBUF
+                           ! AUV(2,NNBB2) = fBUF
+                           ! fBUF = AUV(3,NNBB1) + AUV(3,NNBB2)
+                           ! AUV(3,NNBB1) = fBUF
+                           ! AUV(3,NNBB2) = fBUF
+                           ! fBUF = AUV(4,NNBB1) + AUV(4,NNBB2)
+                           ! AUV(4,NNBB1) = fBUF
+                           ! AUV(4,NNBB2) = fBUF
+                           ! fBUF = MOM_LV_X(NNBB1) + MOM_LV_X(NNBB2)
+                           ! MOM_LV_X(NNBB1) = fBUF
+                           ! MOM_LV_X(NNBB2) = fBUF
+                           ! fBUF = MOM_LV_Y(NNBB1) + MOM_LV_Y(NNBB2)
+                           ! MOM_LV_Y(NNBB1) = fBUF
+                           ! MOM_LV_Y(NNBB2) = fBUF
+                           AUV(1,NNBB2) = 2.D0 * AUV(1,NNBB1) + AUV(1,NNBB2)
+                           AUV(2,NNBB2) = 2.D0 * AUV(2,NNBB1) + AUV(2,NNBB2)
+                           AUV(3,NNBB2) = 2.D0 * AUV(3,NNBB1) + AUV(3,NNBB2)
+                           AUV(4,NNBB2) = 2.D0 * AUV(4,NNBB1) + AUV(4,NNBB2)
+                           MOM_LV_X(NNBB2) =
+     &                       2.D0 * MOM_LV_X(NNBB1) + MOM_LV_X(NNBB2)
+                           MOM_LV_Y(NNBB2) =
+     &                       2.D0 * MOM_LV_Y(NNBB1) + MOM_LV_Y(NNBB2)
+                        ENDIF
+                     ENDDO
+                     I = I + NVELL(K)
+                  CASE(4,24,5,25)
+                     I = I + NVELL(K)*2
+                  CASE DEFAULT
+                     I = I + NVELL(K)
+            END SELECT    
+         ENDDO 
+      ENDIF
+
+C.... Smoothing the values at specified node pairs by taking average
+      IF(LoadSmoothingNodePairs) THEN
+         DO I=1,NP
+            IF(SmoothingNodePairs(I).gt.0) THEN
+               J = SmoothingNodePairs(I)
+               IF((NODECODE(I)).NE.0.AND.(NODECODE(J).NE.0)) THEN
+                  fBUF = AUV(1,I) + AUV(1,J)
+                  AUV(1,I) = fBUF
+                  AUV(1,J) = fBUF
+                  fBUF = AUV(2,I) + AUV(2,J)
+                  AUV(2,I) = fBUF
+                  AUV(2,J) = fBUF
+                  fBUF = AUV(3,I) + AUV(3,J)
+                  AUV(3,I) = fBUF
+                  AUV(3,J) = fBUF
+                  fBUF = AUV(4,I) + AUV(4,J)
+                  AUV(4,I) = fBUF
+                  AUV(4,J) = fBUF
+                  fBUF = MOM_LV_X(I) + MOM_LV_X(J)
+                  MOM_LV_X(I) = fBUF
+                  MOM_LV_X(J) = fBUF
+                  fBUF = MOM_LV_Y(I) + MOM_LV_Y(J)
+                  MOM_LV_Y(I) = fBUF
+                  MOM_LV_Y(J) = fBUF
+               ENDIF
+            ENDIF
+         ENDDO
+      ENDIF
+
+CSB.. STITCH TOGETHER FULLY SUBMERGED IBTYPE=64 WEIR NODE PAIRS
+C     (2) BACK SIDE TO FRONT SIDE
+      IF(NFLUXIB.EQ.1) THEN
+         I = 0                         
+         DO K = 1, NBOU
+            SELECT CASE(LBCODEI(I+1))
+                CASE(64)
+                    DO J = 1,NVELL(K)
+                        I = I + 1
+                        IF(ISSUBMERGED64(I).NE.0) THEN
+                           NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
+                           NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
+                           AUV(1,NNBB1) = AUV(1,NNBB2)
+                           AUV(2,NNBB1) = AUV(2,NNBB2)
+                           AUV(3,NNBB1) = AUV(3,NNBB2)
+                           AUV(4,NNBB1) = AUV(4,NNBB2)
+                           MOM_LV_X(NNBB1) = MOM_LV_X(NNBB2)
+                           MOM_LV_Y(NNBB1) = MOM_LV_Y(NNBB2)
                         ENDIF
                      ENDDO
                      I = I + NVELL(K)
@@ -983,6 +1049,23 @@ C...
          ENDDO
       ENDIF
 
+! C.... Smoothing the values at specified node pairs by taking average
+!       IF(LoadSmoothingNodePairs) THEN
+!          DO I=1,NP
+!             IF(SmoothingNodePairs(I).gt.0) THEN
+!                J = SmoothingNodePairs(I)
+!                IF((NODECODE(I)).NE.0.AND.(NODECODE(J).NE.0)) THEN
+!                   fBuf = ( UU2(I) + UU2(J) ) * 0.5D0
+!                   UU2(I) = fBuf
+!                   UU2(J) = fBuf
+!                   fBuf = ( VV2(I) + VV2(J) ) * 0.5D0
+!                   VV2(I) = fBuf
+!                   VV2(J) = fBuf
+!                ENDIF
+!             ENDIF
+!          ENDDO
+!       ENDIF
+      
 C...  Compute fluxes
 
       DO I=1,NP
