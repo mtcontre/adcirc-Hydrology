@@ -38,6 +38,7 @@
                       ! 23 = Miller cylindrical,
                       ! 24 = Gall-Stereographic cylindrical)
       real(sz),allocatable, target ::  dp(:)  ! bathymetric depth
+      real(sz),allocatable, target ::  htp1(:),htp2(:)  ! total depth
       integer,allocatable :: nm(:,:)          ! element table size(ne,3)
       real(8),allocatable :: x(:)   ! x cartesian node locations x(np)
       real(8),allocatable :: y(:)   ! y cartesian node locations y(np)
@@ -2754,6 +2755,7 @@
       allocate ( slam(mnp),sfea(mnp),x(mnp),y(mnp),labels(mnp))
       call dict(node_dict, mnp)
       allocate ( dp(mnp) )
+      allocate ( htp1(mnp),htp2(mnp) )
       allocate ( nm(mne,3))
       allocate ( areas(mne), totalarea(mnp))
       allocate ( nneigh(mnp),mju(mnp),nodele(mnp))

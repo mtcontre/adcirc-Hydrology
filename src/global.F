@@ -825,6 +825,9 @@ C     v49.48.01 tcm 20110126 Variables related to kdtree searches
       logical :: usingDynamicWaterLevelCorrection = .false.
       real(sz), allocatable, target :: dynamicWaterLevelCorrectionSta(:)
 
+! C---- Tangent vectors along smoothing node pairs, later used in momentum.F
+!       real(sz), allocatable :: SmoothingNodePairsTangentVec(:,:)
+      
 C----- DW --- periodic bc 
       INTEGER:: NPERSEG, NNPERBC
       INTEGER, ALLOCATABLE:: IPERCONN(:,:), PERBC_IDN_MAP(:)
@@ -1195,6 +1198,10 @@ C    Allocate array for ESL i/o - only needed if
 C    loadEleSlopeLim.eqv..true
       ALLOCATE (ESLCOUNT(MNP))
       ESLCOUNT = 0.d0
+
+! C     For smoothing node pairs
+!       ALLOCATE (SmoothingNodePairsTangentVec(MNP,:))
+!       SmoothingNodePairsTangentVec = 1.d0
 
 #ifdef CMPI
       ALLOCATE ( IDUMY(1), DUMY1(1), DUMY2(1) )

@@ -1739,9 +1739,9 @@ C     (1) FRONT SIDE TO BACK SIDE
                            ! GWCE_LV(NNBB1) = fBUF
                            ! GWCE_LV(NNBB2) = fBUF
                            COEFDTemp(NNBB2) =
-     &                       2.D0 * COEFD(NNBB1) + COEFD(NNBB2)
+     &                       1.D0*COEFD(NNBB1) + COEFD(NNBB2)
                            GWCE_LV(NNBB2) =
-     &                       2.D0 * GWCE_LV(NNBB1) + GWCE_LV(NNBB2)
+     &                       1.D0*GWCE_LV(NNBB1) + GWCE_LV(NNBB2)
                            ETA1(NNBB2) =
      &                       ( ETA1(NNBB1) + ETA1(NNBB2) ) * 0.5D0
                         ENDIF
@@ -1824,6 +1824,45 @@ C...  JCG ITERATIVE MATRIX SOLVER
             ETA2(I)=NODECODE(I)*ETAS(I)+ETA1(I) !COMPUTE NEW ELEVATIONS
          END DO
       ENDIF
+
+CSB.. Copy the water elevation at the node to the other node if 1) the water elevation
+C     at the lower bottom depth is higher the bottom depth at the other node and
+C     2) the node with the higher bottom depth is dry and 3) the ISSUBMERGED64 status
+C     is non-zero.
+C
+   !    IF((NFLUXIB.EQ.1).AND.(ILump.NE.0)) THEN
+   !       I = 0                         
+   !       DO K = 1, NBOU
+   !       SELECT CASE(LBCODEI(I+1))
+   !       CASE(64)
+   !       DO J = 1,NVELL(K)
+   !       I = I + 1
+   !       IF(ISSUBMERGED64(I).NE.0) THEN
+   !       NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
+   !       NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
+   !       IF((NODECODE(NNBB1).EQ.0).AND.(NODECODE(NNBB2).NE.0).AND.
+   !   &         ((ETA2(NNBB2)+IFNLFA*DP(NNBB1)).GT.0.D0)) THEN
+   !          ETA2(NNBB1) = ETA2(NNBB2)
+   !          ! NODECODE(NNBB1) = 1
+   !          WRITE(*,'(A,I5,I5,E10.3,E10.3,I3)')
+   !   &        'A:',NNBB1,NNBB2,ETA2(NNBB1),ETA2(NNBB2),NODECODE(NNBB1)
+   !       ELSE IF((NODECODE(NNBB2).EQ.0).AND.(NODECODE(NNBB2).NE.0).AND.
+   !   &         ((ETA2(NNBB1)+IFNLFA*DP(NNBB2)).GT.0.D0)) THEN
+   !          ETA2(NNBB2) = ETA2(NNBB1)
+   !          ! NODECODE(NNBB2) = 1
+   !          WRITE(*,'(A,I5,I5,E10.3,E10.3,I3)')
+   !   &        'B:',NNBB1,NNBB2,ETA2(NNBB1),ETA2(NNBB2),NODECODE(NNBB2)
+   !          ENDIF
+   !       ENDIF
+   !       ENDDO
+   !       I = I + NVELL(K)
+   !       CASE(4,24,5,25)
+   !       I = I + NVELL(K)*2
+   !       CASE DEFAULT
+   !       I = I + NVELL(K)
+   !       END SELECT
+   !       ENDDO
+   !    ENDIF
 
 C...... DW, periodic bcs
       CALL UPDATE_PERSLNODES() ;

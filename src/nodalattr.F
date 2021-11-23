@@ -2055,7 +2055,7 @@ C     jgf47.04 Argument for lower limit of Cd was removed; this value
 C     is now specified by the user in fort.15.
 C
 C     ----------------------------------------------------------------
-      SUBROUTINE Apply2DBottomFriction(UU1, VV1, DP, ETA2, G,
+      SUBROUTINE Apply2DBottomFriction(UU1, VV1, DP, ETA2, HTP2, G,
      &     IFNLFA, NP, TK)
       USE GLOBAL, ONLY: MLD
 C      USE, INTRINSIC :: IEEE_ARITHMETIC !jgfdebug ieee_is_nan()
@@ -2064,6 +2064,7 @@ C      USE, INTRINSIC :: IEEE_ARITHMETIC !jgfdebug ieee_is_nan()
       REAL(SZ), intent(in), dimension(NP) :: UU1  ! x-dir velocities
       REAL(SZ), intent(in), dimension(NP) :: VV1  ! y-dir velocities
       REAL(SZ), intent(in), dimension(NP) :: DP   ! bathymetric depths
+      REAL(SZ), intent(in), dimension(NP) :: HTP2 ! total depths
       REAL(SZ), intent(in), dimension(NP) :: ETA2 ! water surf. elevations
       REAL(SZ), intent(in) :: G                   ! gravitational constant
       INTEGER, intent(in) :: IFNLFA               ! nonlin. finite amp. flag
@@ -2083,7 +2084,7 @@ C     Step 0. Convert Manning's N to Cd, if necessary.
          DO I=1, NP
             IF (ManningsN(I).le.0d0) cycle ! Can use Cd where man <= 0
             FRIC(I)=g*ManningsN(I)**2.d0
-     &           /( ( DP(I)+IFNLFA*ETA2(I) )**(1.d0/3.d0) ) ! sb46.28sb02
+     &           /( HTP2(I)**(1.d0/3.d0) ) ! sb46.28sb02
             !sb46.28sb02  Lower limit is applied here.
             IF(FRIC(I).LT.BFCdLLimit) THEN
                FRIC(I) = BFCdLLimit
@@ -2102,7 +2103,7 @@ C
 C     ... Combined Cd for bottom friction and momentum dispersion
          DO I = 1,NP
             UV1 = SQRT(UU1(I)*UU1(I)+VV1(I)*VV1(I))
-            H1  = DP(I) + IFNLFA*ETA2(I)
+            H1  = HTP2(I)
             IF (HBREAK.gt.0d0) then
 C              ... Cd as a power function [a(x^b-1)] of x = MLD
                FRIC(I) = CF + HBREAK*(max(4d-3,MLD(I))**FTHETA - 1d0)
@@ -2119,7 +2120,7 @@ C     .. Step 1. Apply friction arising from turbulent viscous interaction
 C        with the sea floor.
          DO I=1, NP
             UV1 = SQRT(UU1(I)*UU1(I)+VV1(I)*VV1(I))
-            H1  = DP(I) + IFNLFA*ETA2(I)
+            H1  = HTP2(I)
             TK(I)= FRIC(I)*
      &            (IFLINBF +                                         ! linear
      &            (UV1/H1) * (IFNLBF +                               ! nonlinear
@@ -2133,7 +2134,7 @@ C     pilings, if required.
       IF (LoadBridgePilings) THEN 
          DO I=1, NP
             UV1=SQRT(UU1(I)*UU1(I)+VV1(I)*VV1(I))
-            H1=DP(I)+IFNLFA*ETA2(I)
+            H1=HTP2(I)
             Fr=UV1*UV1/(G*H1)
             BK = BridgePilings(I,1)
             BALPHA = BridgePilings(I,2)

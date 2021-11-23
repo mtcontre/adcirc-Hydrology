@@ -153,9 +153,10 @@ C*******************************************************************************
      &  IPERCONN, VIDispDXOH, VIDispDYOH, IFSFM, adcirc_norm2, CAliDisp,
      &  usingDynamicWaterLevelCorrection, Cs2, Ad, Bd, G,
      &  dynamicWaterLevelCorrection1, dynamicWaterLevelCorrection2
-      USE MESH, ONLY : NE, NP, NM, DP, Areas, TotalArea,
+      USE MESH, ONLY : NE, NP, NM, DP, Areas, TotalArea, HTP1, HTP2,
      &     NNeigh, NeiTab, NeiTabEle, MJU, FDXE, FDYE,
-     &     SWITCH_ELTAB_PERBC, SFacEle, SFMYEle, SFMXEle, TANPHI 
+     &     SWITCH_ELTAB_PERBC, SFacEle, SFMYEle, SFMXEle, TANPHI,
+     &     X, Y, SFMX, lbarray_pointer
       USE BOUNDARIES, ONLY : NFLUXGBC, NVELME, ME2GW, NBV, LBCODEI,
      &    NBOU, LBCODEI, NVELL, IBCONN, ISSUBMERGED64, NFLUXIB,
      &    CSII, SIII, NEleZNG, ZNGIF1, ZNGIF2, ZNGIF3                 
@@ -217,10 +218,12 @@ C..... DW
       REAL(8) :: SPNGCOEF_X, SPNGCOEF_Y
       REAL(SZ):: pr1_NM1, pr1_NM2, pr1_NM3
       REAL(SZ):: pr2_NM1, pr2_NM2, pr2_NM3
-C.....
-      INTEGER:: NNBB1, NNBB2
-      REAL(SZ):: fBUF
 C......DW
+C..... SB
+      INTEGER:: NNBB1, NNBB2, IS1, IS2
+      REAL(SZ):: fBUF, fBUF1, fBUF2, X1, Y1, X2, Y2, XL, SI, CS
+      REAL(SZ):: COEFIB64
+C.....
       call setMessageSource("mom_eqs_new_nc")
 #if defined(TIMESTEP_TRACE) || defined(ALL_TRACE)
       call allMessage(DEBUG,"Enter.")
@@ -266,12 +269,18 @@ Corbitt 120322: Localized Advection
          V1N1=VV1(NM1)
          V1N2=VV1(NM2)
          V1N3=VV1(NM3)
-         H1N1=DP(NM1)+IFNLFA*ETA1(NM1)
-         H1N2=DP(NM2)+IFNLFA*ETA1(NM2)
-         H1N3=DP(NM3)+IFNLFA*ETA1(NM3)
-         H2N1=DP(NM1)+IFNLFA*ETA2(NM1)
-         H2N2=DP(NM2)+IFNLFA*ETA2(NM2)
-         H2N3=DP(NM3)+IFNLFA*ETA2(NM3)
+         ! H1N1=DP(NM1)+IFNLFA*ETA1(NM1)
+         ! H1N2=DP(NM2)+IFNLFA*ETA1(NM2)
+         ! H1N3=DP(NM3)+IFNLFA*ETA1(NM3)
+         ! H2N1=DP(NM1)+IFNLFA*ETA2(NM1)
+         ! H2N2=DP(NM2)+IFNLFA*ETA2(NM2)
+         ! H2N3=DP(NM3)+IFNLFA*ETA2(NM3)
+         H1N1=HTP1(NM1)
+         H1N2=HTP1(NM2)
+         H1N3=HTP1(NM3)
+         H2N1=HTP2(NM1)
+         H2N2=HTP2(NM2)
+         H2N3=HTP2(NM3)
          QX1N1=QX1(NM1)
          QX1N2=QX1(NM2)
          QX1N3=QX1(NM3)
@@ -677,18 +686,20 @@ C      DispY=0.D0
       SPNGCOEF_Y = 0.D0
       DO I=1,NP
          NCI=NODECODE(I)
-         IF (TotalArea(I).ne.0.d0) THEN
-            IF (CME_AreaInt_Corr) THEN       !Correct area integration
-               MOM_LV_X(I)=MOM_LV_X(I)/TotalArea(I)
-               MOM_LV_Y(I)=MOM_LV_Y(I)/TotalArea(I)
-            ENDIF
-            IF (CME_AreaInt_Orig) THEN       !Original (incorrect) area integration
-               MOM_LV_X(I)=MOM_LV_X(I)/MJU(I)
-               MOM_LV_Y(I)=MOM_LV_Y(I)/MJU(I)
-            ENDIF
-         ENDIF
-         H1=DP(I)+IFNLFA*ETA1(I)
-         H2=DP(I)+IFNLFA*ETA2(I)
+         ! IF (TotalArea(I).ne.0.d0) THEN
+         !    IF (CME_AreaInt_Corr) THEN       !Correct area integration
+         !       MOM_LV_X(I)=MOM_LV_X(I)/TotalArea(I)
+         !       MOM_LV_Y(I)=MOM_LV_Y(I)/TotalArea(I)
+         !    ENDIF
+         !    IF (CME_AreaInt_Orig) THEN       !Original (incorrect) area integration
+         !       MOM_LV_X(I)=MOM_LV_X(I)/MJU(I)
+         !       MOM_LV_Y(I)=MOM_LV_Y(I)/MJU(I)
+         !    ENDIF
+         ! ENDIF
+         ! H1=DP(I)+IFNLFA*ETA1(I)
+         ! H2=DP(I)+IFNLFA*ETA2(I)
+         H1 = HTP1(I)
+         H2 = HTP2(I)
          IF((NWS.NE.0).OR.(NRS.NE.0)) THEN
             WSX=DTO2*IFWIND*(WSX1(I)/H1+WSX2(I)/H2)
             WSY=DTO2*IFWIND*(WSY1(I)/H1+WSY2(I)/H2)
@@ -729,10 +740,12 @@ C            DispY    = DT*VIDispDYOH(I)
 C         ENDIF
 
 C        WJP 02.24.2018 Get the righthand side momentum 
-         MOM_LV_X(I) = NCI*(MOM_LV_X(I)+WSX+(1.D0-VCOEFXX)*UU1(I) 
-     &               - VCOEFXY*VV1(I)) !-VIDBCPDX) !-DispX)
-         MOM_LV_Y(I) = NCI*(MOM_LV_Y(I)+WSY+(1.D0-VCOEFYY)*VV1(I)
-     &               - VCOEFYX*UU1(I)) !-VIDBCPDY) !-DispY)
+         MOM_LV_X(I) = NCI*(MOM_LV_X(I)
+     &               + TotalArea(I)*(WSX+(1.D0-VCOEFXX)*UU1(I) 
+     &                              - VCOEFXY*VV1(I))) !-VIDBCPDX) !-DispX)
+         MOM_LV_Y(I) = NCI*(MOM_LV_Y(I)
+     &               + TotalArea(I)*(WSY+(1.D0-VCOEFYY)*VV1(I)
+     &                              - VCOEFYX*UU1(I))) !-VIDBCPDY) !-DispY)
 
 C...     DW, absorbing layers
          IF (MOM_SPONGE) THEN
@@ -746,10 +759,10 @@ CSB 2021-09-08 Multiply DTO2 to balance with the terms of UU1 and UU2
 C...     DW
 
 C        WJP 02.24.2018 Get the lefthand side momentum 
-         AUV(1,I) = 1d0 + VCOEFXX*NCI
-         AUV(2,I) = 1d0 + VCOEFYY*NCI
-         AUV(3,I) = VCOEFXY*NCI
-         AUV(4,I) = VCOEFYX*NCI
+         AUV(1,I) = TotalArea(I)*(1d0 + VCOEFXX*NCI)
+         AUV(2,I) = TotalArea(I)*(1d0 + VCOEFYY*NCI)
+         AUV(3,I) = TotalArea(I)*VCOEFXY*NCI
+         AUV(4,I) = TotalArea(I)*VCOEFYX*NCI
       
       END DO
 
@@ -888,56 +901,74 @@ C...
 C...  SOLVE FOR VELOCITY AT NEW LEVEL  (s+1)
 C...
 
+! CSB.. Apply essential no normal flow bc on the smoothing node pairs
+!       IF(LoadSmoothingNodePairs) THEN
+!          DO IS1=1,NP
+!             IF(SmoothingNodePairs(IS1).gt.0) THEN
+!                IS2 = SmoothingNodePairs(IS1)
+!                X1 = X(IS1)
+!                Y1 = Y(IS1)
+!                X2 = X(IS2)
+!                Y2 = Y(IS2)
+!                XL = SQRT((X1-X2)**2+(Y1-Y2)**2)
+!                CS = (X1-X2)/XL
+!                SI = SFMX(IS1)*(Y1-Y2)/XL
+
+!                ! At Node IS1
+!                fBUF = SI*MOM_LV_X(IS1) - CS*MOM_LV_Y(IS1)
+!                MOM_LV_X(IS1) =  SI * fBUF
+!                MOM_LV_Y(IS1) = -CS * fBUF
+!                AUV(3,IS1) = 0.D0
+!                AUV(4,IS1) = 0.D0
+
+!                ! At Node IS2
+!                fBUF = SI*MOM_LV_X(IS2) - CS*MOM_LV_Y(IS2)
+!                MOM_LV_X(IS2) =  SI * fBUF
+!                MOM_LV_Y(IS2) = -CS * fBUF
+!                AUV(3,IS2) = 0.D0
+!                AUV(4,IS2) = 0.D0
+!             ENDIF
+!          ENDDO
+!       ENDIF
+
 CSB.. STITCH TOGETHER FULLY SUBMERGED IBTYPE=64 WEIR NODE PAIRS
 C     (1) FRONT SIDE TO BACK SIDE
       IF(NFLUXIB.EQ.1) THEN
          I = 0                         
          DO K = 1, NBOU
             SELECT CASE(LBCODEI(I+1))
-                CASE(64)
-                    DO J = 1,NVELL(K)
-                        I = I + 1
-                        IF(ISSUBMERGED64(I).NE.0) THEN
-                           NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
-                           NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
-                           ! fBUF = AUV(1,NNBB1) + AUV(1,NNBB2)
-                           ! AUV(1,NNBB1) = fBUF
-                           ! AUV(1,NNBB2) = fBUF
-                           ! fBUF = AUV(2,NNBB1) + AUV(2,NNBB2)
-                           ! AUV(2,NNBB1) = fBUF
-                           ! AUV(2,NNBB2) = fBUF
-                           ! fBUF = AUV(3,NNBB1) + AUV(3,NNBB2)
-                           ! AUV(3,NNBB1) = fBUF
-                           ! AUV(3,NNBB2) = fBUF
-                           ! fBUF = AUV(4,NNBB1) + AUV(4,NNBB2)
-                           ! AUV(4,NNBB1) = fBUF
-                           ! AUV(4,NNBB2) = fBUF
-                           ! fBUF = MOM_LV_X(NNBB1) + MOM_LV_X(NNBB2)
-                           ! MOM_LV_X(NNBB1) = fBUF
-                           ! MOM_LV_X(NNBB2) = fBUF
-                           ! fBUF = MOM_LV_Y(NNBB1) + MOM_LV_Y(NNBB2)
-                           ! MOM_LV_Y(NNBB1) = fBUF
-                           ! MOM_LV_Y(NNBB2) = fBUF
-                           AUV(1,NNBB2) = 2.D0 * AUV(1,NNBB1) + AUV(1,NNBB2)
-                           AUV(2,NNBB2) = 2.D0 * AUV(2,NNBB1) + AUV(2,NNBB2)
-                           AUV(3,NNBB2) = 2.D0 * AUV(3,NNBB1) + AUV(3,NNBB2)
-                           AUV(4,NNBB2) = 2.D0 * AUV(4,NNBB1) + AUV(4,NNBB2)
-                           MOM_LV_X(NNBB2) =
-     &                       2.D0 * MOM_LV_X(NNBB1) + MOM_LV_X(NNBB2)
-                           MOM_LV_Y(NNBB2) =
-     &                       2.D0 * MOM_LV_Y(NNBB1) + MOM_LV_Y(NNBB2)
-                        ENDIF
-                     ENDDO
-                     I = I + NVELL(K)
-                  CASE(4,24,5,25)
-                     I = I + NVELL(K)*2
-                  CASE DEFAULT
-                     I = I + NVELL(K)
+               CASE(64)
+               DO J = 1,NVELL(K)
+                  I = I + 1
+   !                IF(NBV(I).EQ.1581) THEN
+   !                   WRITE(*,'(A,I3,I3)') 
+   !   &               'ISSUBMERGED64 AT NODE 1581:', ISSUBMERGED64(I),
+   !   &               NODECODE(NBV(I))
+   !                ENDIF
+                  IF(ISSUBMERGED64(I).NE.0) THEN
+                     NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
+                     NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
+              
+                     AUV(1,NNBB2) = 1.D0*AUV(1,NNBB1) + AUV(1,NNBB2)
+                     AUV(2,NNBB2) = 1.D0*AUV(2,NNBB1) + AUV(2,NNBB2)
+                     AUV(3,NNBB2) = 1.D0*AUV(3,NNBB1) + AUV(3,NNBB2)
+                     AUV(4,NNBB2) = 1.D0*AUV(4,NNBB1) + AUV(4,NNBB2)
+                     MOM_LV_X(NNBB2) =
+     &                       1.D0*MOM_LV_X(NNBB1) + MOM_LV_X(NNBB2)
+                     MOM_LV_Y(NNBB2) =
+     &                       1.D0*MOM_LV_Y(NNBB1) + MOM_LV_Y(NNBB2)
+                  ENDIF
+               ENDDO
+               I = I + NVELL(K)
+               CASE(4,24,5,25)
+               I = I + NVELL(K)*2
+               CASE DEFAULT
+               I = I + NVELL(K)
             END SELECT    
          ENDDO 
       ENDIF
 
-C.... Smoothing the values at specified node pairs by taking average
+C.... Smoothing the values at specified node pairs by merging equations
       IF(LoadSmoothingNodePairs) THEN
          DO I=1,NP
             IF(SmoothingNodePairs(I).gt.0) THEN
@@ -1003,8 +1034,13 @@ C.....interface nodes.
       DO I = 1,NP
          ! WJP 02.24.2018 Performing the final solve
          DDU    = AUV(1,I)*AUV(2,I)-AUV(3,I)*AUV(4,I)
-         UU2(I) = (MOM_LV_X(I)*AUV(2,I)-MOM_LV_Y(I)*AUV(3,I))/DDU
-         VV2(I) = (MOM_LV_Y(I)*AUV(1,I)-MOM_LV_X(I)*AUV(4,I))/DDU
+         IF (DDU.NE.0.D0) THEN
+            UU2(I) = (MOM_LV_X(I)*AUV(2,I)-MOM_LV_Y(I)*AUV(3,I))/DDU
+            VV2(I) = (MOM_LV_Y(I)*AUV(1,I)-MOM_LV_X(I)*AUV(4,I))/DDU
+         ELSE
+            UU2(I) = 0.D0
+            VV2(I) = 0.D0
+         ENDIF
 
 c        IF(MJU(I).NE.NODELE(I)) THEN !uncomment for essential
 c           UBAR2(I)=0.D0    !no slip and normal flux
@@ -1065,11 +1101,48 @@ C...
 !             ENDIF
 !          ENDDO
 !       ENDIF
-      
+C.... Removing the normal component of velocity vectors at specified node pairs
+C.... only when the node is attached to a boundary and both sides are submerged.
+C.... Note that the ISSUBMERGED64 value is zero if the node is not a part of
+C.... the IBTYPE=64 internal barrier boundary. The ISSUBMERGED64 value is non zero
+C.... only when the node belongs to a IBTYPE=64 internal barrier boundary and
+C.... the water elevation at the node is higher than the weir height on both sides
+C.... of the weir.
+      IF(LoadSmoothingNodePairs) THEN
+         DO IS1=1,NP
+            IF(SmoothingNodePairs(IS1).gt.0) THEN
+               IS2 = SmoothingNodePairs(IS1)
+               IF((LBArray_Pointer(IS1).GT.0).AND.(LBArray_Pointer(IS2).GT.0)) THEN
+                  IF((ISSUBMERGED64(LBArray_Pointer(IS1)).EQ.0).AND.
+     &               (ISSUBMERGED64(LBArray_Pointer(IS2)).EQ.0)) THEN
+                     X1 = X(IS1)
+                     Y1 = Y(IS1)
+                     X2 = X(IS2)
+                     Y2 = Y(IS2)
+                     XL = SQRT((X1-X2)**2+(Y1-Y2)**2)
+                     CS = (X1-X2)/XL
+                     SI = SFMX(IS1)*(Y1-Y2)/XL
+
+                     ! At Node IS1
+                     fBUF = SI*UU2(IS1) - CS*VV2(IS1)
+                     UU2(IS1) =  SI * fBUF
+                     VV2(IS1) = -CS * fBUF
+
+                     ! At Node IS2
+                     fBUF = SI*UU2(IS2) - CS*VV2(IS2)
+                     UU2(IS2) =  SI * fBUF
+                     VV2(IS2) = -CS * fBUF
+                  ENDIF
+               ENDIF
+            ENDIF
+         ENDDO
+      ENDIF
+
 C...  Compute fluxes
 
       DO I=1,NP
-         H2 = DP(I)+IFNLFA*ETA2(I)
+         ! H2 = DP(I)+IFNLFA*ETA2(I)
+         H2 = HTP2(I)
          QX2(I) = UU2(I)*H2
          QY2(I) = VV2(I)*H2
       ENDDO

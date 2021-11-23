@@ -72,7 +72,7 @@ C
       USE WRITE_OUTPUT, ONLY : writeOutput2D, writeHotStart, 
      &    writeWarnElev, collectInundationData, collectMinMaxData
       USE MESH, ONLY : NE, NP, DP, SLAM, SFEA, ICS, TotalArea,
-     &                  MJU, Areas, SFAC
+     &                  MJU, Areas, SFAC, HTP1, HTP2
       USE BOUNDARIES, ONLY : NOPE, NETA, NBOU, NVEL, LBCODEI, NBV, SIII,
      &    NFLUXF, NFLUXB, NFLUXGBC, NFLUXIB, NFLUXIBP, NFLUXRBC, CSII,
      &    BARLANHT, BARLANCFSP, NVELL, IBCONN, BARINHT, BARINCFSP,
@@ -552,13 +552,21 @@ C
          ENDIF
 
       ENDIF  !NDDT = 2
+
+CSB...Initialize Total Depths
+      DO I=1,NP
+         HTP1(I) = DP(I)+IFNLFA*ETA1(I)
+         HTP2(I) = DP(I)+IFNLFA*ETA2(I)
+      ENDDO
+
 C
 C
 C-------------------BOTTOM FRICTION-------------------------------------
 C
 C     2DDI.Set up the 2D friction coefficient
       if (C2DDI) then
-         CALL Apply2DBottomFriction(UU1, VV1, DP, ETA2, G, IFNLFA, NP, TK)
+         CALL Apply2DBottomFriction(UU1, VV1, DP, ETA2, HTP2, 
+     &     G, IFNLFA, NP, TK)
          ! WJP 02.24.2018 Get the wave drag coefficients
          ! that are put into TKM (which include TK from bottom friction)
          IF (CBaroclinic) THEN

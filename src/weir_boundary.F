@@ -29,6 +29,7 @@ C-----------------------------------------------------------------------
             REAL(SZ),ALLOCATABLE     :: BARLANHT1(:)   !...External Barrier elevation at previous timestep
             REAL(SZ),ALLOCATABLE     :: BARLANHT2(:)   !...External Barrier elevation at current timestep
             REAL(SZ), PARAMETER      :: BARMIN=0.04D0
+            REAL(SZ), PARAMETER      :: BARMIN64=0.04D0
 
             !...Averaging information in time for boundaries. 
             !   This was previously zeroed out in the code, but the
@@ -2125,8 +2126,9 @@ C-----------------------------------------------------------------------
      &          BARRIER_INDEX,BOUNDARYNODE,BOUNDARY,TIMELOC,FLUX)
 
                 USE BOUNDARIES,ONLY:BARINCFSB,BARINCFSP,
-     &              NVELL,IBCONN,BARINHT,ISSUBMERGED64
+     &              NVELL,IBCONN,BARINHT,ISSUBMERGED64,NBV
                 USE GLOBAL,ONLY:NIBNODECODE,TVW,USE_TVW,NODECODE
+                USE MESH,ONLY:LBArray_Pointer
                 IMPLICIT NONE
                 INTEGER,INTENT(IN),TARGET   :: BARRIER_INDEX
                 INTEGER,INTENT(IN),TARGET   :: BOUNDARY
@@ -2212,11 +2214,12 @@ C..............ZC - STREAMLINE THE PROCESS SINCE BARAVGWT IS ZERO BY DEFAULT
                FLUX=0.D0
                ISSUBMERGED64(I) = 0
 
-               IF((RBARWL1.GT.BARMIN).AND.(RBARWL2.GT.BARMIN)) THEN
+               IF((RBARWL1.GT.BARMIN64).AND.(RBARWL2.GT.BARMIN64)) THEN
 C...............THIS IS THE ONLY DIFFERENCE OF IBTYPE=64 FROM IBTYPE=24.
 C               WATER LEVEL ON BOTH SIDES OF BARRIER ABOVE BARRIER -> CASE 0
                   FLUX = 0.D0
                   ISSUBMERGED64(I) = 1
+                  ISSUBMERGED64(LBArray_Pointer(NNBB2)) = 1
                ELSEIF((RBARWL1.LT.0.D0).AND.(RBARWL2.LT.0.D0)) THEN
 C...............WATER LEVEL ON BOTH SIDES OF BARRIER BELOW BARRIER -> CASE 1
                   FLUX=0.D0
@@ -2224,7 +2227,7 @@ C...............WATER LEVEL ON BOTH SIDES OF BARRIER BELOW BARRIER -> CASE 1
 C...............WATER LEVEL EQUAL ON BOTH SIDES OF BARRIER
 C................TO WITHIN TOLERANCE BARMIN -> CASE 2
                   FLUX=0.D0
-               ELSEIF((RBARWL1.GT.RBARWL2).AND.(RBARWL1.GT.BARMIN)) THEN
+               ELSEIF((RBARWL1.GT.RBARWL2).AND.(RBARWL1.GT.BARMIN64)) THEN
 C...............WATER LEVEL GREATER ON THIS SIDE OF THE BARRIER AND IS SUCH
 C................THAT OVERTOPPING IS OCCURING
 C................THUS THIS SIDE IS THE SOURCE SIDE OF THE FLOW ACROSS THE BARRIER
@@ -2252,7 +2255,7 @@ C..................OUTWARD SUPERCRITICAL FLOW -> CASE 4
      &                    (RBARWL1F*G)**0.5D0
                      ENDIF
                   ENDIF
-               ELSEIF((RBARWL2.GT.RBARWL1).AND.(RBARWL2.GT.BARMIN)) THEN
+               ELSEIF((RBARWL2.GT.RBARWL1).AND.(RBARWL2.GT.BARMIN64)) THEN
 C...............WATER LEVEL LOWER ON THIS SIDE OF BARRIER AND IS SUCH
 C................THAT OVERTOPPING IS OCCURING
 C................THUS THIS IS THE RECEIVING SIDE OF THE FLOW ACROSS THE BARRIER
@@ -2264,6 +2267,11 @@ C................THE BARRIER
 C................ALSO WE CHECK TO SEE IF THE SOURCE SIDE OF THE BARRIER HAS AT
 C................LEAST ONE WET EDGE. IF NOT, WE SHUT DOWN THE FLOW ACROSS
 C................THE BARRIER. shintaro v46.28.sb05.05 11/01/2006
+    !                 WRITE(*,'(A,I5,I5,I3,I3)') 'WEIR:',NNBB1,NNBB2,
+    !  &                 NODECODE(NNBB1),NODECODE(NNBB2)
+    !                 FLUX = 0.D0
+    !                 ISSUBMERGED64(I) = 1
+    !                 ISSUBMERGED64(LBArray_Pointer(NNBB2)) = 1
                   IF(RBARWL1.GT.RBARWL2F) THEN
 C..................INWARD SUBCRITICAL FLOW -> CASE 5
                      IF(NODECODE(NNBB2).EQ.0.OR.NNBB2WN.EQ.0) THEN

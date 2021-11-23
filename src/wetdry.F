@@ -118,18 +118,22 @@ CWET...
 !----------------------------------------------------------------------
       subroutine computeWettingAndDrying(it)
       use sizes, only : sz, mne, mnp
-      use global, only : noff, nodecode, nnodecode, eta2, tk, nolifa,
+      use global, only : noff, nodecode, nnodecode, eta1, eta2, tk,
+     &    nolifa,
      &    bsx1, bsy1, btime_end, C2DDI, C3D, g, h0, ifnlfa, nddt,
      &    nibnodecode, ilump, ncchange, tkm
 #ifdef CMPI
      &    ,idumy
       use messenger
 #endif
-      use mesh, only : ne, np, dp, mju, totalArea, nm, x, y, areas
+      use mesh, only : ne, np, dp, mju, totalArea, nm, x, y, areas ,
+     &   htp1,htp2
       use nodalattributes, only : BFCdLLimit, fgamma, ftheta, fric,
      &   manningsn, hbreak, ifhybf, ifnlbf, iflinbf, loadManningsN,
      &   loadZ0B_var, z0b_var,
      &   loadSmoothingNodePairs,SmoothingNodePairs
+      USE BOUNDARIES, ONLY : NBV, NBOU, LBCODEI, NVELL, IBCONN,
+     &   ISSUBMERGED64, NFLUXIB                 
       use global_3dvs, only : a, b, islip, kp, z0b, sigma, evtot, q
       use subdomain, only : subdomainOn, enforceBN, enforceWDcb, enforceWDob
       implicit none
@@ -151,8 +155,10 @@ CWET...
       real(sz) :: htot
       real(sz) :: h1
       integer :: nbnctot
-      integer :: i,j
+      integer :: i,j,k
       integer :: ie
+      integer :: nnbb1,nnbb2,ibuf
+      real(sz) :: fbuf
 
       if (nolifa.ne.2) then
          return ! wetting and drying is not active 
@@ -192,6 +198,35 @@ cjjwC     Use Message-Passing to update nodecode and nnodecode at ghost nodes
 cjjw#ifdef CMPI
 cjjw         CALL UPDATEI(NODECODE,NNODECODE,2)
 cjjw#endif
+
+CSB....WET BOTH NODES OF A WEIR IF A IBTYPE=64 WEIR IS SUBMERGED
+   !    IF(NFLUXIB.EQ.1) THEN
+   !       I = 0                         
+   !       DO K = 1, NBOU
+   !          SELECT CASE(LBCODEI(I+1))
+   !             CASE(64)
+   !             DO J = 1,NVELL(K)
+   !                I = I + 1
+   !                IF(NBV(I).EQ.1581) THEN
+   !                   WRITE(*,'(A,I3,I3)') 
+   !   &               'WD ISSUBMERGED64 AT NODE 1581:', ISSUBMERGED64(I),
+   !   &               NNODECODE(NBV(I))
+   !                ENDIF
+   !                IF(ISSUBMERGED64(I).NE.0) THEN
+   !                   NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
+   !                   NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
+   !                   NNODECODE(NNBB1) = 1
+   !                   NNODECODE(NNBB2) = 1
+   !                ENDIF
+   !             ENDDO
+   !             I = I + NVELL(K)
+   !             CASE(4,24,5,25)
+   !             I = I + NVELL(K)*2
+   !             CASE DEFAULT
+   !             I = I + NVELL(K)
+   !          END SELECT    
+   !       ENDDO 
+   !    ENDIF
 
 CWET...
 CWET...WET/DRY SECTION PART 2 - NODAL WETTING LOOPS W1 AND W2
@@ -992,6 +1027,44 @@ CWET...
             TotalArea(NM2)=TotalArea(NM2)+AreaEle
             TotalArea(NM3)=TotalArea(NM3)+AreaEle
          ENDDO
+         DO I=1,NP
+            HTP1(I) = DP(I)+IFNLFA*ETA1(I)
+            HTP2(I) = DP(I)+IFNLFA*ETA2(I)
+         ENDDO
+
+CSB... Update MJU and TotalArea along the IBTYPE=64 weir boundaries
+         ! IF(NFLUXIB.EQ.1) THEN
+         !    I = 0                         
+         !    DO K = 1, NBOU
+         !       SELECT CASE(LBCODEI(I+1))
+         !          CASE(64)
+         !          DO J = 1,NVELL(K)
+         !             I = I + 1
+         !             IF(ISSUBMERGED64(I).NE.0) THEN
+         !                NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
+         !                NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
+         !                IBUF = MJU(NNBB1) + MJU(NNBB2)
+         !                MJU(NNBB1) = IBUF
+         !                MJU(NNBB2) = IBUF
+         !                FBUF = TotalArea(NNBB1) + TotalArea(NNBB2)
+         !                TotalArea(NNBB1) = FBUF
+         !                TotalArea(NNBB2) = FBUF
+         !                ! FBUF = ( HTP1(NNBB1) + HTP1(NNBB2) ) * 0.5D0
+         !                ! HTP1(NNBB1) = FBUF
+         !                ! HTP1(NNBB2) = FBUF
+         !                ! FBUF = ( HTP2(NNBB1) + HTP2(NNBB2) ) * 0.5D0
+         !                ! HTP2(NNBB1) = FBUF
+         !                ! HTP2(NNBB2) = FBUF
+         !             ENDIF
+         !          ENDDO
+         !          I = I + NVELL(K)
+         !          CASE(4,24,5,25)
+         !          I = I + NVELL(K)*2
+         !          CASE DEFAULT
+         !          I = I + NVELL(K)
+         !       END SELECT    
+         !    ENDDO 
+         ! ENDIF
 
 cjjwnote - looks like this is used later in momentum equations
 cjjwnote - this has implications on making this into a subroutine

@@ -1439,6 +1439,13 @@ C     For sponge layer
         CALL SpongeLayerRelatedPrep( ) 
       END IF
 C................END DW.......
+
+! Csb<< SmoothingNodePair related prep
+!       IF ( LoadSmoothingNodePairs .AND. FoundSmoothingNodePairs ) THEN
+!          CALL SmoothingNodePairRelatedPrep( )
+!       END IF
+! Csb>>
+
 C...
 C...  READ AND PROCESS NCOR - SPATIALLY VARYING CORIOLIS PARAMETER
 C...
@@ -6258,3 +6265,25 @@ C-----------------------------------------------------------------------
 C-----------------------------------------------------------------------
       end subroutine logNamelistReadStatus
 C-----------------------------------------------------------------------
+
+! C-----------------------------------------------------------------------
+! C                          S U B R O U T I N E
+! C     S M O O T H I N G   N O D E   P A I R   R E L A T E D   P R E P
+! C-----------------------------------------------------------------------
+!       SUBROUTINE SmoothingNodePairRelatedPrep
+!       USE GLOBAL,ONLY: SmoothingNodePairsTangentVec
+!       USE NodalAttributes,ONLY: SmoothingNodePairs
+!       USE Mesh,ONLY: 
+!       IMPLICIT NONE
+!       INTEGER :: I, J
+!       DO I = 1,NP
+!          IF (SmoothingNodePairs(I).NE.0) THEN
+!             J = SmoothingNodePairs(I)
+!          ELSE
+!             SmoothingNodePairsTangentVec(I,:) = 1.D0
+!          ENDIF
+!       ENDDO
+! C-----------------------------------------------------------------------
+!       END SUBROUTIN
+! C-----------------------------------------------------------------------
+
