@@ -261,7 +261,7 @@ C...
 4312  FORMAT(/,'**** W A R N I N G ****',/
             ' You are running ADCIRC in SINGLE PRECISION! ',/
             ' It is always recommended that you run ADCIRC in ',/
-            ' DOUBLE PRECISION ONLY.'
+            ' DOUBLE PRECISION ONLY.')
 #else
       WRITE(16,*) '      - CODE SETUP TO RUN WITH 8 byte REALS'
 #endif

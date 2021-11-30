@@ -131,7 +131,9 @@ CWET...
       use nodalattributes, only : BFCdLLimit, fgamma, ftheta, fric,
      &   manningsn, hbreak, ifhybf, ifnlbf, iflinbf, loadManningsN,
      &   loadZ0B_var, z0b_var,
-     &   loadSmoothingNodePairs,SmoothingNodePairs
+     &   loadSmoothingNodePairs,
+     &   ListSmoothingNodePairs, NListSmoothingNodePairs,
+     &   NNodesListSmoothingNodePairs
       USE BOUNDARIES, ONLY : NBV, NBOU, LBCODEI, NVELL, IBCONN,
      &   ISSUBMERGED64, NFLUXIB                 
       use global_3dvs, only : a, b, islip, kp, z0b, sigma, evtot, q
@@ -155,10 +157,9 @@ CWET...
       real(sz) :: htot
       real(sz) :: h1
       integer :: nbnctot
-      integer :: i,j,k
+      integer :: i,j,k,l
       integer :: ie
-      integer :: nnbb1,nnbb2,ibuf
-      real(sz) :: fbuf
+      integer :: nnc
 
       if (nolifa.ne.2) then
          return ! wetting and drying is not active 
@@ -198,35 +199,6 @@ cjjwC     Use Message-Passing to update nodecode and nnodecode at ghost nodes
 cjjw#ifdef CMPI
 cjjw         CALL UPDATEI(NODECODE,NNODECODE,2)
 cjjw#endif
-
-CSB....WET BOTH NODES OF A WEIR IF A IBTYPE=64 WEIR IS SUBMERGED
-   !    IF(NFLUXIB.EQ.1) THEN
-   !       I = 0                         
-   !       DO K = 1, NBOU
-   !          SELECT CASE(LBCODEI(I+1))
-   !             CASE(64)
-   !             DO J = 1,NVELL(K)
-   !                I = I + 1
-   !                IF(NBV(I).EQ.1581) THEN
-   !                   WRITE(*,'(A,I3,I3)') 
-   !   &               'WD ISSUBMERGED64 AT NODE 1581:', ISSUBMERGED64(I),
-   !   &               NNODECODE(NBV(I))
-   !                ENDIF
-   !                IF(ISSUBMERGED64(I).NE.0) THEN
-   !                   NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
-   !                   NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
-   !                   NNODECODE(NNBB1) = 1
-   !                   NNODECODE(NNBB2) = 1
-   !                ENDIF
-   !             ENDDO
-   !             I = I + NVELL(K)
-   !             CASE(4,24,5,25)
-   !             I = I + NVELL(K)*2
-   !             CASE DEFAULT
-   !             I = I + NVELL(K)
-   !          END SELECT    
-   !       ENDDO 
-   !    ENDIF
 
 CWET...
 CWET...WET/DRY SECTION PART 2 - NODAL WETTING LOOPS W1 AND W2
@@ -984,19 +956,26 @@ CWET...
 CWET...END WET/DRY SECTION  - PART 3
 CWET...
 
-C.... Setting the same nodecode value to each smoothing node pair
+C.... Setting the same nodecode value at the nodes at each smoothing node pair
       IF(LoadSmoothingNodePairs) THEN
-         DO I=1,NP
-            IF(SmoothingNodePairs(I).gt.0) THEN
-               J = SmoothingNodePairs(I)
-               IF(NNODECODE(I).NE.NNODECODE(J)) THEN
-                  IF(NNODECODE(I).NE.NODECODE(I)) THEN
-                     NNODECODE(J) = NNODECODE(I)
-                  ELSE
-                     NNODECODE(I) = NNODECODE(J)
-                  ENDIF
+         DO K=1,NListSmoothingNodePairs
+            I = ListSmoothingNodePairs(K,1)
+            ! 0) DEFAULT VALUE
+            NNC = NNODECODE(I)
+            ! 1) FIND UPDATED VALUE 
+            DO L=2,NNodesListSmoothingNodePairs(K)
+               J = ListSmoothingNodePairs(K,L)
+               IF(NNODECODE(J).NE.NODECODE(J)) THEN
+                  NNC = NNODECODE(J)
+                  EXIT ! EXiT THE LOOP IF AN UPDATED NODECODE IS FOUND
                ENDIF
-            ENDIF
+            ENDDO
+            ! 2) DISTRIBUTE IT
+            NNODECODE(I) = NNC
+            DO L=2,NNodesListSmoothingNodePairs(K)
+               J = ListSmoothingNodePairs(K,L)
+               NNODECODE(J) = NNC
+            ENDDO
          ENDDO
       ENDIF
 
@@ -1031,40 +1010,6 @@ CWET...
             HTP1(I) = DP(I)+IFNLFA*ETA1(I)
             HTP2(I) = DP(I)+IFNLFA*ETA2(I)
          ENDDO
-
-CSB... Update MJU and TotalArea along the IBTYPE=64 weir boundaries
-         ! IF(NFLUXIB.EQ.1) THEN
-         !    I = 0                         
-         !    DO K = 1, NBOU
-         !       SELECT CASE(LBCODEI(I+1))
-         !          CASE(64)
-         !          DO J = 1,NVELL(K)
-         !             I = I + 1
-         !             IF(ISSUBMERGED64(I).NE.0) THEN
-         !                NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
-         !                NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
-         !                IBUF = MJU(NNBB1) + MJU(NNBB2)
-         !                MJU(NNBB1) = IBUF
-         !                MJU(NNBB2) = IBUF
-         !                FBUF = TotalArea(NNBB1) + TotalArea(NNBB2)
-         !                TotalArea(NNBB1) = FBUF
-         !                TotalArea(NNBB2) = FBUF
-         !                ! FBUF = ( HTP1(NNBB1) + HTP1(NNBB2) ) * 0.5D0
-         !                ! HTP1(NNBB1) = FBUF
-         !                ! HTP1(NNBB2) = FBUF
-         !                ! FBUF = ( HTP2(NNBB1) + HTP2(NNBB2) ) * 0.5D0
-         !                ! HTP2(NNBB1) = FBUF
-         !                ! HTP2(NNBB2) = FBUF
-         !             ENDIF
-         !          ENDDO
-         !          I = I + NVELL(K)
-         !          CASE(4,24,5,25)
-         !          I = I + NVELL(K)*2
-         !          CASE DEFAULT
-         !          I = I + NVELL(K)
-         !       END SELECT    
-         !    ENDDO 
-         ! ENDIF
 
 cjjwnote - looks like this is used later in momentum equations
 cjjwnote - this has implications on making this into a subroutine

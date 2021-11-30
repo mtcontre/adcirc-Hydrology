@@ -110,8 +110,11 @@ C     to avoid CFL condition violation
       LOGICAL              :: FoundSmoothingNodePairs
       CHARACTER(LEN=80)    :: SmoothingNodePairsUnits
       INTEGER              :: SmoothingNodePairsNoOfVals
-      REAL(SZ)             :: SmoothingNodePairsDefVal
-      REAL(SZ),ALLOCATABLE :: SmoothingNodePairs(:)
+      INTEGER              :: SmoothingNodePairsDefVal(4)
+      INTEGER,ALLOCATABLE  :: SmoothingNodePairs(:,:)
+      INTEGER,ALLOCATABLE  :: ListSmoothingNodePairs(:,:)
+      INTEGER              :: NListSmoothingNodePairs
+      INTEGER,ALLOCATABLE  :: NNodesListSmoothingNodePairs(:)
 C
 C     The following flags are .true. if the corresponding data are
 C     required for the run, according to the unit 15 control file
@@ -373,8 +376,8 @@ Corbitt 120321:
 C
       LoadSmoothingNodePairs     = .False.
       FoundSmoothingNodePairs    = .FALSE.
-      SmoothingNodePairsNoOfVals = 1
-      SmoothingNodePairsDefVal   = 0.D0
+      SmoothingNodePairsNoOfVals = 3
+      SmoothingNodePairsDefVal   = 0
 C
       LoadTau0           = .False.
       LoadStartDry       = .False.
@@ -787,7 +790,7 @@ Corbitt 120321: Allow Advection to be handled locally instead of globally.
             ENDIF
          CASE("smoothing_node_pairs")
             IF (LoadSmoothingNodePairs) THEN
-               SmoothingNodePairs = na(i)%xdmfArray
+               SmoothingNodePairs = na(i)%xdmfMatrix
             ENDIF
          CASE("elemental_slope_limiter")
             IF( LoadEleSlopeLim ) THEN
@@ -903,7 +906,7 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
       ALLOCATE(SwanWaveRefrac(NumOfNodes))
 Corbitt 120321: Allow advection to be turned on locally instead of globally
       ALLOCATE(AdvectionState(NumOfNodes))
-      ALLOCATE(SmoothingNodePairs(NumOfNodes))
+      ALLOCATE(SmoothingNodePairs(NumOfNodes,SmoothingNodePairsNoOfVals))
       ALLOCATE(River_et_WSE(NumOfNodes))  ! tcm 20140502 v51.27
       ALLOCATE(OverlandReductionFactor(NumOfNodes))
       ALLOCATE(elemental_slope_limiter_grad_max(NumOfNodes))
@@ -1211,7 +1214,8 @@ Corbitt 120321: Allow advection to be turned on locally instead of globally
             FoundSmoothingNodePairs = .TRUE.
             READ(13,'(A80)') SmoothingNodePairsUnits
             READ(13,*) SmoothingNodePairsNoOfVals
-            READ(13,*) SmoothingNodePairsDefVal
+            READ(13,*) (SmoothingNodePairsDefVal(j),
+     &                  j=1,SmoothingNodePairsNoOfVals)
          CASE("elemental_slope_limiter")
             FoundEleSlopeLim = .TRUE.
             READ(13,'(A80)') EleSlopeLimUnits
@@ -1386,8 +1390,11 @@ Corbitt 120321: Allow Advection to be handled locally instead of globally.
             ENDIF
          CASE("smoothing_node_pairs")
             IF (LoadSmoothingNodePairs) THEN
-               CALL LoadAttrVec(SmoothingNodePairs,SmoothingNodePairsDefVal,
+               CALL LoadAttrMatInt(SmoothingNodePairs,
+     &              SmoothingNodePairsNoOfVals,
+     &              SmoothingNodePairsDefVal,
      &              NumNodesNotDefault, NScreen, MyProc, NAbOut)
+               CALL PrepSmoothingNodePairs()
             ELSE
                SkipDataSet = .TRUE.
             ENDIF
@@ -1607,6 +1614,70 @@ C
       RETURN
 C     ----------------------------------------------------------------
       END SUBROUTINE LoadAttrMat
+C     ----------------------------------------------------------------
+
+
+
+C     ----------------------------------------------------------------
+C         S U B R O U T I N E     L O A D  A T T R  M A T  I N T
+C     ----------------------------------------------------------------
+C
+C     Subroutine to load a single set of nodal attributes from
+C     the Nodal Attributes File (unit 13) if there is more than one
+C     value per node.
+C
+C     Added for integer nodal attributes. Based on LoadAttrMat. SB
+C
+C     ----------------------------------------------------------------
+      SUBROUTINE LoadAttrMatInt(AttributeData, NumCol, Default,
+     &     NumNodesNotDef, NScreen, MyProc, NAbOut, NodesNotDef )
+      USE MESH,ONLY:node_dict,find
+      IMPLICIT NONE
+      INTEGER, intent(in) :: NumCol  ! number of columns in the matrix
+      INTEGER, intent(out),
+     &     dimension(NumOfNodes,NumCol) :: AttributeData
+      INTEGER, intent(in), dimension(NumCol) :: Default ! default values
+      INTEGER, intent(in) :: NumNodesNotDef  ! number of nodes spec. in file
+      INTEGER, intent(in) :: NScreen ! 1 for debug info to screen (unit 6)
+      INTEGER, intent(in) :: MyProc  ! in parallel, only MyProc=0 i/o to screen
+      INTEGER, intent(in) :: NAbOut  ! 1 to abbrev. output to unit 16
+      INTEGER            :: TempAttData(NumCol) 
+      INTEGER             :: NodeNum ! node label listed in the file
+      INTEGER             :: DictNode ! node position in array
+C------ DW
+      INTEGER, optional::  NodesNotDef(:)
+C------
+C
+C     Set all nodes to user-specified default values.
+      IF (NABOUT.EQ.0) WRITE(16,1001)
+      DO i=1, NumOfNodes
+         DO j=1, NumCol
+            AttributeData(i,j)=Default(j)
+         END DO
+      END DO
+C
+      IF (NABOUT.EQ.0) WRITE(16,1005)
+      IF (NABOUT.EQ.0) WRITE(16,*) NumCol,ubound(AttributeData),NumNodesNotDef
+      DO i=1, NumNodesNotDef
+         READ(13,*) NodeNum, (TempAttData(j),j=1,NumCol)
+         DictNode = find(node_dict,NodeNum)
+         IF ( present(NodesNotDef) ) THEN
+            NodesNotDef(i) = DictNode 
+         END IF
+         AttributeData(DictNode,:) = TempAttData(:)
+         IF (NABOUT.EQ.0) WRITE(16,1010) NodeNum,
+     &        (AttributeData(DictNode,j),j=1,NumCol)
+      END DO
+C
+ 1001 FORMAT(/,10X,'Set all nodes to the default values of ',/,
+     &     99I11,/)
+ 1005 FORMAT(/,10X,'Now setting the following nodes to these values:',
+     &     /,10X,'NODE',5X,'DATA',5X/)
+ 1010 FORMAT(7X,I8,6X,12(1X,I11))
+C
+      RETURN
+C     ----------------------------------------------------------------
+      END SUBROUTINE LoadAttrMatInt
 C     ----------------------------------------------------------------
 
 
@@ -2764,6 +2835,49 @@ C
       call unsetMessageSource()
 C     ----------------------------------------------------------------
       END SUBROUTINE na_terminate
+C     ----------------------------------------------------------------
+
+C     ----------------------------------------------------------------
+C        S U B R O U T I N E   P R E P  S M O O T H I N G  N O D E  P A I R S
+C     ----------------------------------------------------------------
+C     Parepare list of smoothing node pairs
+C     ----------------------------------------------------------------
+      SUBROUTINE PrepSmoothingNodePairs()
+C     ----------------------------------------------------------------
+      USE MESH, ONLY : NP
+      IMPLICIT NONE 
+      INTEGER I,J,K
+      INTEGER JMAX
+
+      NListSmoothingNodePairs = 0
+      JMAX = 0
+      DO I=1,NP
+         IF(SmoothingNodePairs(I,1).NE.0) THEN
+            NListSmoothingNodePairs = NListSmoothingNodePairs + 1
+            DO J=1,SmoothingNodePairsNoOfVals
+               IF(SmoothingNodePairs(I,J).EQ.0) EXIT
+               IF(JMAX.LT.J) JMAX = J
+            ENDDO
+         ENDIF
+      ENDDO
+
+      ALLOCATE(ListSmoothingNodePairs(NListSmoothingNodePairs,JMAX+1))
+      ALLOCATE(NNodesListSmoothingNodePairs(NListSmoothingNodePairs))
+
+      K = 0
+      DO I=1,NP
+         IF(SmoothingNodePairs(I,1).NE.0) THEN
+            K = K + 1
+            ListSmoothingNodePairs(K,1) = I
+            DO J=1,SmoothingNodePairsNoOfVals
+               IF(SmoothingNodePairs(I,J).EQ.0) EXIT
+               ListSmoothingNodePairs(K,J+1) = SmoothingNodePairs(I,J)
+               NNodesListSmoothingNodePairs(K) = J+1
+            ENDDO
+         ENDIF
+      ENDDO
+
+      END SUBROUTINE PrepSmoothingNodePairs
 C     ----------------------------------------------------------------
 
 

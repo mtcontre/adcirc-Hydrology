@@ -251,7 +251,9 @@ C
      &     CalculateTimeVaryingTau0, LoadAdvectionState, advectlocal,
      &     LoadAbsLayerSigma, absorblayer_sigma_eta,
      &     absorblayer_sigma_mnx, absorblayer_sigma_mny,
-     &     LoadSmoothingNodePairs, SmoothingNodePairs
+     &     LoadSmoothingNodePairs,
+     &     ListSmoothingNodePairs, NListSmoothingNodePairs,
+     &     NNodesListSmoothingNodePairs
       USE SPONGELAYER
 
 #ifdef CMPI
@@ -263,7 +265,7 @@ C
 
       IMPLICIT NONE
 
-      INTEGER IE, JN, IJ, I, J, K                         !local loop counters
+      INTEGER IE, JN, IJ, I, J, K, L                         !local loop counters
       INTEGER IT
       INTEGER NM1, NM2, NM3, NMI1, NMI2, NMI3, NMJ1, NMJ2, NMJ3
       INTEGER NC1, NC2, NC3, NCEle, NCI, NCJ
@@ -1757,20 +1759,24 @@ C     (1) FRONT SIDE TO BACK SIDE
 
 C.... Smoothing the values at specified node pairs by taking average
       IF(LoadSmoothingNodePairs) THEN
-         DO I=1,NP
-            IF(SmoothingNodePairs(I).gt.0) THEN
-               J = SmoothingNodePairs(I)
-               IF((NODECODE(I)).NE.0.AND.(NODECODE(J).NE.0)) THEN
-                  fBUF = COEFDTemp(I) + COEFDTemp(J)
-                  COEFDTemp(I) = fBUF
-                  COEFDTemp(J) = fBUF
-                  fBUF = GWCE_LV(I) + GWCE_LV(J)
-                  GWCE_LV(I) = fBUF
-                  GWCE_LV(J) = fBUF
-                  fBUF = ( ETA1(I) + ETA1(J) ) * 0.5D0
-                  ETA1(I) = fBUF
-                  ETA1(J) = fBUF
-               ENDIF
+         DO K=1,NListSmoothingNodePairs
+            I = ListSmoothingNodePairs(K,1)
+            IF((NODECODE(I).NE.0)) THEN
+               ! 1) Sum them up
+               DO L=2,NNodesListSmoothingNodePairs(K)
+                  J = ListSmoothingNodePairs(K,L)
+                  COEFDTemp(I) = COEFDTemp(I) + COEFDTemp(J)
+                  GWCE_LV(I)   = GWCE_LV(I) + GWCE_LV(J)
+                  ETA1(I)      = ETA1(I) + ETA1(J)
+               ENDDO
+               ! 2) Distribute them
+               ETA1(I) = ETA1(I) / NNodesListSmoothingNodePairs(K)
+               DO L=2,NNodesListSmoothingNodePairs(K)
+                  J = ListSmoothingNodePairs(K,L)
+                  COEFDTemp(J) = COEFDTemp(I)
+                  GWCE_LV(J)   = GWCE_LV(I)
+                  ETA1(J)      = ETA1(I)
+               ENDDO
             ENDIF
          ENDDO
       ENDIF

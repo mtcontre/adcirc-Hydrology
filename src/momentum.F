@@ -164,7 +164,9 @@ C*******************************************************************************
      &     NOLIBF,
      &     LoadAbsLayerSigma, absorblayer_sigma_eta,
      &     absorblayer_sigma_mnx, absorblayer_sigma_mny,
-     &     LoadSmoothingNodePairs, SmoothingNodePairs
+     &     LoadSmoothingNodePairs,
+     &     ListSmoothingNodePairs, NListSmoothingNodePairs,
+     &     NNodesListSmoothingNodePairs
       USE SUBDOMAIN, ONLY : subdomainOn, enforceBN, enforceUVOB, 
      &                       enforceUVCB
       USE SPONGELAYER
@@ -172,7 +174,7 @@ C*******************************************************************************
 
       IMPLICIT NONE
 
-      INTEGER IE, I, J, K, N                           !local loop counters
+      INTEGER IE, I, J, K, L, N                           !local loop counters
       INTEGER  NM1, NM2, NM3
       INTEGER NC1, NC2, NC3, NCEle, NCI
       INTEGER NBDI
@@ -970,29 +972,29 @@ C     (1) FRONT SIDE TO BACK SIDE
 
 C.... Smoothing the values at specified node pairs by merging equations
       IF(LoadSmoothingNodePairs) THEN
-         DO I=1,NP
-            IF(SmoothingNodePairs(I).gt.0) THEN
-               J = SmoothingNodePairs(I)
-               IF((NODECODE(I)).NE.0.AND.(NODECODE(J).NE.0)) THEN
-                  fBUF = AUV(1,I) + AUV(1,J)
-                  AUV(1,I) = fBUF
-                  AUV(1,J) = fBUF
-                  fBUF = AUV(2,I) + AUV(2,J)
-                  AUV(2,I) = fBUF
-                  AUV(2,J) = fBUF
-                  fBUF = AUV(3,I) + AUV(3,J)
-                  AUV(3,I) = fBUF
-                  AUV(3,J) = fBUF
-                  fBUF = AUV(4,I) + AUV(4,J)
-                  AUV(4,I) = fBUF
-                  AUV(4,J) = fBUF
-                  fBUF = MOM_LV_X(I) + MOM_LV_X(J)
-                  MOM_LV_X(I) = fBUF
-                  MOM_LV_X(J) = fBUF
-                  fBUF = MOM_LV_Y(I) + MOM_LV_Y(J)
-                  MOM_LV_Y(I) = fBUF
-                  MOM_LV_Y(J) = fBUF
-               ENDIF
+         DO K=1,NListSmoothingNodePairs
+            I = ListSmoothingNodePairs(K,1)
+            IF((NODECODE(I).NE.0)) THEN
+               ! 1) Sum them up
+               DO L=2,NNodesListSmoothingNodePairs(K)
+                  J = ListSmoothingNodePairs(K,L)
+                  AUV(1,I) = AUV(1,I) + AUV(1,J)
+                  AUV(2,I) = AUV(2,I) + AUV(2,J)
+                  AUV(3,I) = AUV(3,I) + AUV(3,J)
+                  AUV(4,I) = AUV(4,I) + AUV(4,J)
+                  MOM_LV_X(I) = MOM_LV_X(I) + MOM_LV_X(J)
+                  MOM_LV_Y(I) = MOM_LV_Y(I) + MOM_LV_Y(J)
+               ENDDO
+               ! 2) Distribute them
+               DO L=2,NNodesListSmoothingNodePairs(K)
+                  J = ListSmoothingNodePairs(K,L)
+                  AUV(1,J) = AUV(1,I)
+                  AUV(2,J) = AUV(2,I)
+                  AUV(3,J) = AUV(3,I)
+                  AUV(4,J) = AUV(4,I)
+                  MOM_LV_X(J) = MOM_LV_X(I)
+                  MOM_LV_Y(J) = MOM_LV_Y(I)
+               ENDDO
             ENDIF
          ENDDO
       ENDIF
@@ -1109,9 +1111,11 @@ C.... only when the node belongs to a IBTYPE=64 internal barrier boundary and
 C.... the water elevation at the node is higher than the weir height on both sides
 C.... of the weir.
       IF(LoadSmoothingNodePairs) THEN
-         DO IS1=1,NP
-            IF(SmoothingNodePairs(IS1).gt.0) THEN
-               IS2 = SmoothingNodePairs(IS1)
+         DO K=1,NListSmoothingNodePairs
+            IS1 = ListSmoothingNodePairs(K,1)
+            IF((NODECODE(IS1).NE.0).AND.
+     &         (NNodesListSmoothingNodePairs(K).EQ.2)) THEN
+               IS2 = ListSmoothingNodePairs(K,2)
                IF((LBArray_Pointer(IS1).GT.0).AND.(LBArray_Pointer(IS2).GT.0)) THEN
                   IF((ISSUBMERGED64(LBArray_Pointer(IS1)).EQ.0).AND.
      &               (ISSUBMERGED64(LBArray_Pointer(IS2)).EQ.0)) THEN
