@@ -118,7 +118,9 @@ CWET...
 !----------------------------------------------------------------------
       subroutine computeWettingAndDrying(it)
       use sizes, only : sz, mne, mnp
-      use global, only : noff, nodecode, nnodecode, eta1, eta2, tk,
+      use global, only : DEBUG,
+     &    setMessageSource, unsetMessageSource, allMessage,
+     &    noff, nodecode, nnodecode, eta1, eta2, tk,
      &    nolifa,
      &    bsx1, bsy1, btime_end, C2DDI, C3D, g, h0, ifnlfa, nddt,
      &    nibnodecode, ilump, ncchange, tkm
@@ -127,7 +129,7 @@ CWET...
       use messenger
 #endif
       use mesh, only : ne, np, dp, mju, totalArea, nm, x, y, areas ,
-     &   htp1,htp2
+     &   htp1,htp2,LBArray_Pointer
       use nodalattributes, only : BFCdLLimit, fgamma, ftheta, fric,
      &   manningsn, hbreak, ifhybf, ifnlbf, iflinbf, loadManningsN,
      &   loadZ0B_var, z0b_var,
@@ -160,6 +162,12 @@ CWET...
       integer :: i,j,k,l
       integer :: ie
       integer :: nnc
+      integer :: nnbb2
+
+      call setMessageSource("computeWettingAndDrying")
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Enter.")
+#endif
 
       if (nolifa.ne.2) then
          return ! wetting and drying is not active 
@@ -175,6 +183,11 @@ CWET...
             NOFFOLD(I)=NOFF(I)
             NOFF(I)=1
          ENDDO
+
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 1")
+#endif
+
 CWET...
 CWET...WET/DRY - PART 1 - NODAL DRYING CRITERIA D1
 CWET....Drying Criteria D1: this depends on NODECODE and updates NODECODE
@@ -195,10 +208,40 @@ CWET...
 CWET...END WET/DRY SECTION - PART 1
 CWET...
 
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 2")
+#endif
+
+CSB...
+CSB...Nodal Wetting Criteria for the ibtype=64 weir boundary
+CSB...Check the node if it's along the ibtype=64 weir boundary and if the weir is
+CSB...submerged. If it is the case, set the nnodecode to 1.
+CSB...
+         DO I=1,NP
+            IF(LBArray_Pointer(I).GT.0) THEN
+               J = LBArray_Pointer(I)
+               IF((ISSUBMERGED64(J).GT.0).AND.
+     &            (NNODECODE(I).EQ.0)) THEN
+                  NNODECODE(I)=1
+                  NODECODE(I)=1
+                  NCCHANGE=NCCHANGE+1 !NCCHANGE=0 set near beginning of GWCE
+
+                  NNBB2=IBCONN(J)
+                  ETA2(I) = ETA2(NNBB2)
+                  HTOT=DP(I)+ETA2(I)
+                  IF(HTOT.LT.HABSMIN) ETA2(I)=HABSMIN-DP(I)
+               ENDIF
+            ENDIF
+         ENDDO
+
 cjjwC     Use Message-Passing to update nodecode and nnodecode at ghost nodes
 cjjw#ifdef CMPI
 cjjw         CALL UPDATEI(NODECODE,NNODECODE,2)
 cjjw#endif
+
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 3")
+#endif
 
 CWET...
 CWET...WET/DRY SECTION PART 2 - NODAL WETTING LOOPS W1 AND W2
@@ -207,6 +250,10 @@ CWET...
             NM1=NM(I,1)
             NM2=NM(I,2)
             NM3=NM(I,3)
+
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 4")
+#endif
 
 CWET...
 CWET...Nodal Wetting Criteria W1: This depends on changes that occurred in D1
@@ -513,12 +560,20 @@ CWET...
 
          ENDDO
 
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 5")
+#endif
+
          if (subdomainOn.and.enforceBN.eq.1) call enforceWDcb() ! NCSU Subdomain
          if (subdomainOn.and.enforceBN.eq.2) call enforceWDob() ! NCSU Subdomain
 
 C     Use Message-Passing to update nnodecode and nibcnt at ghost nodes
 #ifdef CMPI
          CALL UPDATEI(NNODECODE,NIBCNT,2)
+#endif
+
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 6")
 #endif
 
 
@@ -744,6 +799,10 @@ CWET..
 CWET... ELEMENTAL WETTING CRITERIA WETBATHYCHANGE
 C*******************************************************************************************
 
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 7")
+#endif
+
 CWET...
 CWET...Nodal Wetting Criteria W2b
 CWET...Check for adjacent nodes and force nodes wet when attached
@@ -763,6 +822,10 @@ cjjw#endif
 CWET...
 CWET...END WET/DRY SECTION - PART 2
 CWET...
+
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 8")
+#endif
 
 CWET...
 CWET...START WET/DRY SECTION  - PART 3
@@ -892,6 +955,10 @@ C...sb v46.52.03
             ENDIF
          ENDDO
 
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 9")
+#endif
+
 #ifdef SB_WETDRY
 CWET......added by sb on 11/02/2006
 CWET...
@@ -956,6 +1023,10 @@ CWET...
 CWET...END WET/DRY SECTION  - PART 3
 CWET...
 
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 10")
+#endif
+
 C.... Setting the same nodecode value at the nodes at each smoothing node pair
       IF(LoadSmoothingNodePairs) THEN
          DO K=1,NListSmoothingNodePairs
@@ -978,6 +1049,10 @@ C.... Setting the same nodecode value at the nodes at each smoothing node pair
             ENDDO
          ENDDO
       ENDIF
+
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 11")
+#endif
 
 CWET...
 CWET...START WET/DRY SECTION PART 4 - NODAL DRYING LOOP D2
@@ -1015,6 +1090,8 @@ cjjwnote - looks like this is used later in momentum equations
 cjjwnote - this has implications on making this into a subroutine
 
          DO I=1,NP
+   !          IF((ISSUBMERGED64(LBArray_Pointer(I)).EQ.0).AND. ! Added this to avoid turning off the node once the node along the ibtype=64 weir boundary gets submerged. SB
+   !   &         (NNODECODE(I).EQ.1).AND.(MJU(I).EQ.0)) THEN
             IF((NNODECODE(I).EQ.1).AND.(MJU(I).EQ.0)) THEN
                NNODECODE(I)=0
             ENDIF
@@ -1029,6 +1106,10 @@ cjjwnote - may have to pass TotalArea and mju as well
 
          if (subdomainOn.and.enforceBN.eq.1) call enforceWDcb() ! NCSU Subdomain
          if (subdomainOn.and.enforceBN.eq.2) call enforceWDob() ! NCSU Subdomain
+
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 12")
+#endif
 
 
 C     Use Message-Passing to update nnodecode at ghost nodes
@@ -1050,6 +1131,10 @@ CWET...
 CWET...END WET/DRY SECTION - PART 5
 CWET...
 
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 12")
+#endif
+
 CWET...
 CWET...WET/DRY SECTION - PART 6
 CWET...Check to see if any NOFF changed requiring the matrix to be reset
@@ -1058,6 +1143,11 @@ CWET...
          DO I=1,NE
             IF(NOFF(I).NE.NOFFOLD(I)) NCCHANGE=NCCHANGE+1
          ENDDO
+
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Check point 13")
+#endif
+
 CWET...
 CWET... jgf45.06 If there has been any wetting or drying in any
 CWET... of the subdomains, the NCCHANGE flag will be activated on all
@@ -1080,6 +1170,10 @@ CWET...
 CWET...END WET/DRY SECTION - PART 6
 CWET...
 
+#if defined(WETDRY_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Return.")
+#endif
+      call unsetMessageSource()
 c.....
 !-----------------------------------------------------------------------
       end subroutine computeWettingAndDrying

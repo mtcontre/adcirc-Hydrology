@@ -2343,15 +2343,17 @@
                      IF(NBV(JGW).EQ.NBV(JGW-1)) THEN !L.B. SEGS OVERLAP
                         IF((LBCODEI(JGW).EQ.2) .OR. ! M.E. USES IT ONLY
      &                       (LBCODEI(JGW).EQ.12).OR. ! IF IT IS
-     &                       (LBCODEI(JGW).EQ.22).OR. ! SPECIFIED FLOW,
-     &                       (LBCODEI(JGW).EQ.3) .OR. ! AN OVERFLOW BARRIER
-     &                       (LBCODEI(JGW).EQ.13).OR. ! OR A RADIATION
-     &                       (LBCODEI(JGW).EQ.23).OR. ! BOUNDARY
-     &                       (LBCODEI(JGW).EQ.30).OR.
+!     &                       (LBCODEI(JGW).EQ.22).OR. ! SPECIFIED FLOW, ! SB02172022 Looks like this is not needed.
+     &                       (LBCODEI(JGW).EQ.3) .OR. ! AN OVERFLOW BARRIER,
+     &                       (LBCODEI(JGW).EQ.13).OR. ! AN VERTICAL WALL,
+     &                       (LBCODEI(JGW).EQ.23).OR. ! OR A RADIATION
+     &                       (LBCODEI(JGW).EQ.30).OR. ! BOUNDARY
      &                       (LBCODEI(JGW).EQ.32).OR.
      &                       (LBCODEI(JGW).EQ.40).OR.
      &                       (LBCODEI(JGW).EQ.41).OR.
-     &                       (LBCODEI(JGW).EQ.52)) ME2GW(JME)=JGW
+     &                       (LBCODEI(JGW).EQ.52).OR.
+     &                       (LBCODEI(JGW).EQ.64)) ME2GW(JME)=JGW
+!     &                       (LBCODEI(JGW).EQ.52)) ME2GW(JME)=JGW
                      ENDIF
                   ENDIF
                ENDIF
@@ -2368,15 +2370,17 @@
                   IF(NBVV(K,I).EQ.NBV(1)) THEN !IF OVERLAPS WITH VERY FIRST
                      IF((LBCODEI(JGW).EQ.2) .OR. ! L.B. NODE
      &                    (LBCODEI(JGW).EQ.12).OR. ! M.E. USES IT ONLY IF IT IS
-     &                    (LBCODEI(JGW).EQ.22).OR. ! SPECIFIED FLOW,
+!     &                    (LBCODEI(JGW).EQ.22).OR. ! SPECIFIED FLOW, ! SB02172022 Looks like this is not needed.
      &                    (LBCODEI(JGW).EQ.3) .OR. ! AN OVERFLOW BARRIER OR
-     &                    (LBCODEI(JGW).EQ.13).OR. ! A RADIATION
-     &                    (LBCODEI(JGW).EQ.23).OR. ! BOUNDARY
-     &                    (LBCODEI(JGW).EQ.30).OR.
+     &                    (LBCODEI(JGW).EQ.13).OR. ! AN VERTICAL WALL,
+     &                    (LBCODEI(JGW).EQ.23).OR. ! A RADIATION
+     &                    (LBCODEI(JGW).EQ.30).OR. ! BOUNDARY
      &                    (LBCODEI(JGW).EQ.32).OR.
      &                    (LBCODEI(JGW).EQ.40).OR.
      &                    (LBCODEI(JGW).EQ.41).OR.
-     &                    (LBCODEI(JGW).EQ.52)) ME2GW(1)=JGW
+     &                    (LBCODEI(JGW).EQ.52).OR.
+     &                    (LBCODEI(JGW).EQ.64)) ME2GW(1)=JGW
+!     &                    (LBCODEI(JGW).EQ.52)) ME2GW(1)=JGW
                   ENDIF
                ENDIF
 

@@ -223,6 +223,7 @@ C..... DW
 C......DW
 C..... SB
       INTEGER:: NNBB1, NNBB2, IS1, IS2
+      INTEGER:: WFP1, WFP2 ! NO WET FLOODPLAIN ATTACHED TO SMOOTHING PAIR NODE
       REAL(SZ):: fBUF, fBUF1, fBUF2, X1, Y1, X2, Y2, XL, SI, CS
       REAL(SZ):: COEFIB64
 C.....
@@ -951,14 +952,16 @@ C     (1) FRONT SIDE TO BACK SIDE
                      NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
                      NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
               
-                     AUV(1,NNBB2) = 1.D0*AUV(1,NNBB1) + AUV(1,NNBB2)
-                     AUV(2,NNBB2) = 1.D0*AUV(2,NNBB1) + AUV(2,NNBB2)
-                     AUV(3,NNBB2) = 1.D0*AUV(3,NNBB1) + AUV(3,NNBB2)
-                     AUV(4,NNBB2) = 1.D0*AUV(4,NNBB1) + AUV(4,NNBB2)
-                     MOM_LV_X(NNBB2) =
-     &                       1.D0*MOM_LV_X(NNBB1) + MOM_LV_X(NNBB2)
-                     MOM_LV_Y(NNBB2) =
-     &                       1.D0*MOM_LV_Y(NNBB1) + MOM_LV_Y(NNBB2)
+                     IF(NODECODE(NNBB1).NE.0.AND.NODECODE(NNBB2).NE.0) THEN
+                        AUV(1,NNBB2) = AUV(1,NNBB1) + AUV(1,NNBB2)
+                        AUV(2,NNBB2) = AUV(2,NNBB1) + AUV(2,NNBB2)
+                        AUV(3,NNBB2) = AUV(3,NNBB1) + AUV(3,NNBB2)
+                        AUV(4,NNBB2) = AUV(4,NNBB1) + AUV(4,NNBB2)
+                        MOM_LV_X(NNBB2) =
+     &                       MOM_LV_X(NNBB1) + MOM_LV_X(NNBB2)
+                        MOM_LV_Y(NNBB2) =
+     &                       MOM_LV_Y(NNBB1) + MOM_LV_Y(NNBB2)
+                     ENDIF
                   ENDIF
                ENDDO
                I = I + NVELL(K)
@@ -1011,12 +1014,14 @@ C     (2) BACK SIDE TO FRONT SIDE
                         IF(ISSUBMERGED64(I).NE.0) THEN
                            NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
                            NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
-                           AUV(1,NNBB1) = AUV(1,NNBB2)
-                           AUV(2,NNBB1) = AUV(2,NNBB2)
-                           AUV(3,NNBB1) = AUV(3,NNBB2)
-                           AUV(4,NNBB1) = AUV(4,NNBB2)
-                           MOM_LV_X(NNBB1) = MOM_LV_X(NNBB2)
-                           MOM_LV_Y(NNBB1) = MOM_LV_Y(NNBB2)
+                           IF(NODECODE(NNBB1).NE.0.AND.NODECODE(NNBB2).NE.0) THEN
+                              AUV(1,NNBB1) = AUV(1,NNBB2)
+                              AUV(2,NNBB1) = AUV(2,NNBB2)
+                              AUV(3,NNBB1) = AUV(3,NNBB2)
+                              AUV(4,NNBB1) = AUV(4,NNBB2)
+                              MOM_LV_X(NNBB1) = MOM_LV_X(NNBB2)
+                              MOM_LV_Y(NNBB1) = MOM_LV_Y(NNBB2)
+                           ENDIF
                         ENDIF
                      ENDDO
                      I = I + NVELL(K)
@@ -1110,35 +1115,92 @@ C.... the IBTYPE=64 internal barrier boundary. The ISSUBMERGED64 value is non ze
 C.... only when the node belongs to a IBTYPE=64 internal barrier boundary and
 C.... the water elevation at the node is higher than the weir height on both sides
 C.... of the weir.
+      write(6,'(A,I4,I4,I4,F6.2,I8,I4)') 'ibarray_pointer(1),issubmerged64(.)=',
+     &  lbarray_pointer(1),issubmerged64(lbarray_pointer(1)),
+     &  nodecode(lbarray_pointer(1)), eta2(1),
+     &  IBCONN(lbarray_pointer(1)),nodecode(IBCONN(lbarray_pointer(1)))
+      write(6,'(A,I4,I4,I4,F6.2,I8,I4)') 'ibarray_pointer(2),issubmerged64(.)=',
+     &  lbarray_pointer(2),issubmerged64(lbarray_pointer(2)),
+     &  nodecode(lbarray_pointer(2)), eta2(2),
+     &  IBCONN(lbarray_pointer(2)),nodecode(IBCONN(lbarray_pointer(2)))
       IF(LoadSmoothingNodePairs) THEN
+!          DO K=1,NListSmoothingNodePairs
+!             IS1 = ListSmoothingNodePairs(K,1)
+!             IF((NODECODE(IS1).NE.0).AND.
+!      &         (NNodesListSmoothingNodePairs(K).EQ.2)) THEN
+!                IS2 = ListSmoothingNodePairs(K,2)
+!                IF((LBArray_Pointer(IS1).GT.0).AND.(LBArray_Pointer(IS2).GT.0)) THEN
+! !                  IF((ISSUBMERGED64(LBArray_Pointer(IS1)).EQ.0).AND.
+! !     &               (ISSUBMERGED64(LBArray_Pointer(IS2)).EQ.0)) THEN
+!                   IF((NODECODE(IBCONN(LBArray_Pointer(IS1))).EQ.0).AND.
+!      &               (NODECODE(IBCONN(LBArray_Pointer(IS2))).EQ.0)) THEN
+!                      X1 = X(IS1)
+!                      Y1 = Y(IS1)
+!                      X2 = X(IS2)
+!                      Y2 = Y(IS2)
+!                      XL = SQRT((X1-X2)**2+(Y1-Y2)**2)
+!                      CS = (X1-X2)/XL
+!                      SI = SFMX(IS1)*(Y1-Y2)/XL
+
+!                      ! At Node IS1
+!                      fBUF = SI*UU2(IS1) - CS*VV2(IS1)
+!                      UU2(IS1) =  SI * fBUF
+!                      VV2(IS1) = -CS * fBUF
+
+!                      ! At Node IS2
+!                      fBUF = SI*UU2(IS2) - CS*VV2(IS2)
+!                      UU2(IS2) =  SI * fBUF
+!                      VV2(IS2) = -CS * fBUF
+!                   ENDIF
+!                ENDIF
+!             ENDIF
+!          ENDDO
          DO K=1,NListSmoothingNodePairs
-            IS1 = ListSmoothingNodePairs(K,1)
-            IF((NODECODE(IS1).NE.0).AND.
-     &         (NNodesListSmoothingNodePairs(K).EQ.2)) THEN
-               IS2 = ListSmoothingNodePairs(K,2)
-               IF((LBArray_Pointer(IS1).GT.0).AND.(LBArray_Pointer(IS2).GT.0)) THEN
-                  IF((ISSUBMERGED64(LBArray_Pointer(IS1)).EQ.0).AND.
-     &               (ISSUBMERGED64(LBArray_Pointer(IS2)).EQ.0)) THEN
-                     X1 = X(IS1)
-                     Y1 = Y(IS1)
-                     X2 = X(IS2)
-                     Y2 = Y(IS2)
-                     XL = SQRT((X1-X2)**2+(Y1-Y2)**2)
-                     CS = (X1-X2)/XL
-                     SI = SFMX(IS1)*(Y1-Y2)/XL
-
-                     ! At Node IS1
-                     fBUF = SI*UU2(IS1) - CS*VV2(IS1)
-                     UU2(IS1) =  SI * fBUF
-                     VV2(IS1) = -CS * fBUF
-
-                     ! At Node IS2
-                     fBUF = SI*UU2(IS2) - CS*VV2(IS2)
-                     UU2(IS2) =  SI * fBUF
-                     VV2(IS2) = -CS * fBUF
-                  ENDIF
-               ENDIF
+         IF(NNodesListSmoothingNodePairs(K).EQ.2) THEN
+         IS1 = ListSmoothingNodePairs(K,1)
+         IS2 = ListSmoothingNodePairs(K,2)
+         IF((NODECODE(IS1).NE.0).AND.(NODECODE(IS2).NE.0)) THEN
+            IF(LBArray_Pointer(IS1).LE.0) THEN ! IF THERE IS NO FLOODPLAIN NODE
+               WFP1 = 0
+            ELSE IF((NODECODE(IBCONN(LBArray_Pointer(IS1))).EQ.0).OR. ! IF FLOODPLAIN NODE IS DRY
+     &              (ISSUBMERGED64(LBArray_Pointer(IS1)).EQ.0)) THEN  ! AND THE BANK iS SUBMERGED
+               WFP1 = 0
+            ELSE
+               WFP1 = 1
             ENDIF
+            IF(LBArray_Pointer(IS2).LE.0) THEN ! IF THERE IS NO FLOODPLAIN NODE
+               WFP2 = 0
+            ELSE IF((NODECODE(IBCONN(LBArray_Pointer(IS2))).EQ.0).OR. ! IF FLOODPLAIN NODE IS DRY
+     &              (ISSUBMERGED64(LBArray_Pointer(IS2)).EQ.0)) THEN  ! AND THE BANK iS SUBMERGED
+               WFP2 = 0
+            ELSE
+               WFP2 = 1
+            ENDIF
+            IF((WFP1.EQ.0).AND.(WFP2.EQ.0)) THEN  ! IF BOTH FLOODPLAIN COUNTERPART NODES OF PAIRED NODES ARE NOT WET
+!                  IF((ISSUBMERGED64(LBArray_Pointer(IS1)).EQ.0).AND.
+!     &               (ISSUBMERGED64(LBArray_Pointer(IS2)).EQ.0)) THEN
+!                  IF((NODECODE(IBCONN(LBArray_Pointer(IS1))).EQ.0).AND.
+!     &               (NODECODE(IBCONN(LBArray_Pointer(IS2))).EQ.0)) THEN
+               X1 = X(IS1)
+               Y1 = Y(IS1)
+               X2 = X(IS2)
+               Y2 = Y(IS2)
+               XL = SQRT((X1-X2)**2+(Y1-Y2)**2)
+               CS = (X1-X2)/XL
+               SI = SFMX(IS1)*(Y1-Y2)/XL
+
+               ! At Node IS1
+               fBUF = SI*UU2(IS1) - CS*VV2(IS1)
+               UU2(IS1) =  SI * fBUF
+               VV2(IS1) = -CS * fBUF
+
+               ! At Node IS2
+               fBUF = SI*UU2(IS2) - CS*VV2(IS2)
+               UU2(IS2) =  SI * fBUF
+               VV2(IS2) = -CS * fBUF
+            ENDIF
+         ENDIF
+         ENDIF
          ENDDO
       ENDIF
 

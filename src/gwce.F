@@ -1740,12 +1740,14 @@ C     (1) FRONT SIDE TO BACK SIDE
                            ! fBUF = GWCE_LV(NNBB1) + GWCE_LV(NNBB2)
                            ! GWCE_LV(NNBB1) = fBUF
                            ! GWCE_LV(NNBB2) = fBUF
-                           COEFDTemp(NNBB2) =
-     &                       1.D0*COEFD(NNBB1) + COEFD(NNBB2)
-                           GWCE_LV(NNBB2) =
-     &                       1.D0*GWCE_LV(NNBB1) + GWCE_LV(NNBB2)
-                           ETA1(NNBB2) =
-     &                       ( ETA1(NNBB1) + ETA1(NNBB2) ) * 0.5D0
+                           IF(NODECODE(NNBB1).NE.0.AND.NODECODE(NNBB2).NE.0) THEN
+                               COEFDTemp(NNBB2) =
+     &                           COEFD(NNBB1) + COEFD(NNBB2)
+                               GWCE_LV(NNBB2) =
+     &                           GWCE_LV(NNBB1) + GWCE_LV(NNBB2)
+                               ETA1(NNBB2) =
+     &                           ( ETA1(NNBB1) + ETA1(NNBB2) ) * 0.5D0
+                           ENDIF
                         ENDIF
                      ENDDO
                      I = I + NVELL(K)
@@ -1793,9 +1795,11 @@ C     (2) BACK SIDE TO FRONT SIDE
                         IF(ISSUBMERGED64(I).NE.0) THEN
                            NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
                            NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
-                           COEFDTemp(NNBB1) = COEFDTemp(NNBB2)
-                           GWCE_LV(NNBB1) = GWCE_LV(NNBB2)
-                           ETA1(NNBB1) = ETA1(NNBB2)
+                           IF(NODECODE(NNBB1).NE.0.AND.NODECODE(NNBB2).NE.0) THEN
+                              COEFDTemp(NNBB1) = COEFDTemp(NNBB2)
+                              GWCE_LV(NNBB1) = GWCE_LV(NNBB2)
+                              ETA1(NNBB1) = ETA1(NNBB2)
+                           ENDIF
                         ENDIF
                      ENDDO
                      I = I + NVELL(K)

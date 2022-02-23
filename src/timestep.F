@@ -192,6 +192,7 @@ C....... DW
       LOGICAL, SAVE:: FIRST_ENTER = .TRUE. 
       INTEGER:: NBDI, istep
 C.......
+      LOGICAL ISFRONT
 
       call setMessageSource("timestep")
 #if defined(TIMESTEP_TRACE) || defined(ALL_TRACE)
@@ -1013,8 +1014,13 @@ C                     ACROSS A WEIR
                 CASE(64)
                     DO J = 1,NVELL(K)*2
                         I = I + 1
+                        IF(J.LE.NVELL(K)) THEN
+                           ISFRONT = .TRUE.
+                        ELSE
+                           ISFRONT = .FALSE.
+                        ENDIF
                         CALL COMPUTE_INTERNAL_BOUNDARY64_FLUX(I,J,K,
-     &                      TIMELOC,QN2(I))
+     &                      TIMELOC,QN2(I),ISFRONT)
                     ENDDO
                 CASE DEFAULT
                     I = I + NVELL(K)

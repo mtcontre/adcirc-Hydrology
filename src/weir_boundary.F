@@ -29,7 +29,8 @@ C-----------------------------------------------------------------------
             REAL(SZ),ALLOCATABLE     :: BARLANHT1(:)   !...External Barrier elevation at previous timestep
             REAL(SZ),ALLOCATABLE     :: BARLANHT2(:)   !...External Barrier elevation at current timestep
             REAL(SZ), PARAMETER      :: BARMIN=0.04D0
-            REAL(SZ), PARAMETER      :: BARMIN64=0.04D0
+            REAL(SZ), PARAMETER      :: SUBMIN64=0.5D0
+            REAL(SZ), PARAMETER      :: BARMIN64=0.0D0
 
             !...Averaging information in time for boundaries. 
             !   This was previously zeroed out in the code, but the
@@ -2123,7 +2124,8 @@ C     THIS IS A SUBROUTINE THAT WORKS WITH IBTYPE=64. THIS RETURNS ZERO
 C     WHEN A WEIR IS SUBMERGED ON BOTH SIDES. SB
 C-----------------------------------------------------------------------
             SUBROUTINE COMPUTE_INTERNAL_BOUNDARY64_FLUX(
-     &          BARRIER_INDEX,BOUNDARYNODE,BOUNDARY,TIMELOC,FLUX)
+     &          BARRIER_INDEX,BOUNDARYNODE,BOUNDARY,TIMELOC,FLUX,
+     &          ISFRONT)
 
                 USE BOUNDARIES,ONLY:BARINCFSB,BARINCFSP,
      &              NVELL,IBCONN,BARINHT,ISSUBMERGED64,NBV
@@ -2135,6 +2137,7 @@ C-----------------------------------------------------------------------
                 INTEGER,INTENT(IN),TARGET   :: BOUNDARYNODE
                 REAL(SZ),INTENT(IN)         :: TIMELOC
                 REAL(SZ),INTENT(OUT)        :: FLUX
+                LOGICAL,INTENT(IN)          :: ISFRONT
 
                 INTEGER                     :: NNBB1,NNBB2
                 INTEGER                     :: NNBB1WN,NNBB2WN
@@ -2213,20 +2216,27 @@ C..............ZC - STREAMLINE THE PROCESS SINCE BARAVGWT IS ZERO BY DEFAULT
                RBARWL2F=2.D0*RBARWL2/3.D0
                FLUX=0.D0
                ISSUBMERGED64(I) = 0
+               ISSUBMERGED64(LBArray_Pointer(NNBB2)) = 0
 
-               IF((RBARWL1.GT.BARMIN64).AND.(RBARWL2.GT.BARMIN64)) THEN
-C...............THIS IS THE ONLY DIFFERENCE OF IBTYPE=64 FROM IBTYPE=24.
+               IF((RBARWL1.GT.SUBMIN64).AND.(RBARWL2.GT.SUBMIN64)) THEN
+C...............THIS IS THE MAJOR DIFFERENCE OF IBTYPE=64 FROM IBTYPE=24.
 C               WATER LEVEL ON BOTH SIDES OF BARRIER ABOVE BARRIER -> CASE 0
                   FLUX = 0.D0
                   ISSUBMERGED64(I) = 1
                   ISSUBMERGED64(LBArray_Pointer(NNBB2)) = 1
+                  IF(NNBB1.EQ.1581)
+     &              WRITE(*,'(A,F,F)') 'CASE 0: ', BARINCFSB(I), BARINCFSP(I)
                ELSEIF((RBARWL1.LT.0.D0).AND.(RBARWL2.LT.0.D0)) THEN
 C...............WATER LEVEL ON BOTH SIDES OF BARRIER BELOW BARRIER -> CASE 1
                   FLUX=0.D0
-               ELSEIF(ABS(RBARWL1-RBARWL2).LT.0.01D0) THEN
+                  IF(NNBB1.EQ.1581)
+     &              WRITE(*,'(A,F,F)') 'CASE 1: ', BARINCFSB(I), BARINCFSP(I)
+               ELSEIF(ABS(RBARWL1-RBARWL2).LT.0.0D0) THEN
 C...............WATER LEVEL EQUAL ON BOTH SIDES OF BARRIER
 C................TO WITHIN TOLERANCE BARMIN -> CASE 2
                   FLUX=0.D0
+                  IF(NNBB1.EQ.1581)
+     &              WRITE(*,'(A,F,F)') 'CASE 2: ', BARINCFSB(I), BARINCFSP(I)
                ELSEIF((RBARWL1.GT.RBARWL2).AND.(RBARWL1.GT.BARMIN64)) THEN
 C...............WATER LEVEL GREATER ON THIS SIDE OF THE BARRIER AND IS SUCH
 C................THAT OVERTOPPING IS OCCURING
@@ -2242,17 +2252,26 @@ C................THE BARRIER. shintaro v46.28.sb05.05 11/01/2006
 C..................OUTWARD SUBCRITICAL FLOW -> CASE 3
                      IF(NODECODE(NNBB1).EQ.0.OR.NNBB1WN.EQ.0) THEN
                         FLUX=0.0D0
+                        IF(NNBB1.EQ.1581)
+     &              WRITE(*,'(A,F,F)') 'CASE 3a: ', BARINCFSB(I), BARINCFSP(I)
                      ELSE
                         FLUX=-RampIntFlux*RBARWL2*BARINCFSB(I)*
      &                     (2.D0*G*(RBARWL1-RBARWL2))**0.5D0
+                        IF(NNBB1.EQ.1581)
+     &              WRITE(*,'(A,F,F)') 'CASE 3b: ', BARINCFSB(I), BARINCFSP(I)
                      ENDIF
                   ELSE
 C..................OUTWARD SUPERCRITICAL FLOW -> CASE 4
                      IF(NODECODE(NNBB1).EQ.0.OR.NNBB1WN.EQ.0) THEN
                         FLUX=0.0D0
+                        IF(NNBB1.EQ.1581)
+     &              WRITE(*,'(A,F,F,I,I)') 'CASE 4a: ', BARINCFSB(I), BARINCFSP(I),
+     &                NODECODE(NNBB1), NNBB1WN
                      ELSE
                         FLUX=-RampIntFlux*BARINCFSP(I)*RBARWL1F*
      &                    (RBARWL1F*G)**0.5D0
+                        IF(NNBB1.EQ.1581)
+     &              WRITE(*,'(A,F,F)') 'CASE 4b: ', BARINCFSB(I), BARINCFSP(I)
                      ENDIF
                   ENDIF
                ELSEIF((RBARWL2.GT.RBARWL1).AND.(RBARWL2.GT.BARMIN64)) THEN
@@ -2276,19 +2295,27 @@ C................THE BARRIER. shintaro v46.28.sb05.05 11/01/2006
 C..................INWARD SUBCRITICAL FLOW -> CASE 5
                      IF(NODECODE(NNBB2).EQ.0.OR.NNBB2WN.EQ.0) THEN
                         FLUX=0.0D0
+                        IF(NNBB1.EQ.1581)
+     &              WRITE(*,'(A,F,F)') 'CASE 5a: ', BARINCFSB(I), BARINCFSP(I)
                      ELSE
                         FLUX=RampIntFlux*RBARWL1*BARINCFSB(I)*
      &                     (2.0D0*G*(RBARWL2-RBARWL1))**0.5D0
                         NIBNODECODE(NNBB1)=1
+                        IF(NNBB1.EQ.1581)
+     &              WRITE(*,'(A,F,F)') 'CASE 5b: ', BARINCFSB(I), BARINCFSP(I)
                      ENDIF
                   ELSE
 C..................INWARD SUPERCRITICAL FLOW -> CASE 6
                      IF(NODECODE(NNBB2).EQ.0.OR.NNBB2WN.EQ.0) THEN
                         FLUX=0.0D0
+                        IF(NNBB1.EQ.1581)
+     &              WRITE(*,'(A,F,F)') 'CASE 6a: ', BARINCFSB(I), BARINCFSP(I)
                      ELSE
                         FLUX=RampIntFlux*BARINCFSP(I)*RBARWL2F*
      &                     (RBARWL2F*G)**0.5D0
                         NIBNODECODE(NNBB1)=1
+                        IF(NNBB1.EQ.1581)
+     &              WRITE(*,'(A,F,F)') 'CASE 6b: ', BARINCFSB(I), BARINCFSP(I)
                      ENDIF
                   ENDIF
                ELSE
