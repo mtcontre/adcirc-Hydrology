@@ -116,7 +116,11 @@ C-----------------------------------------------------------------------
      &     InitNAModule, ReadNodalAttr, InitNodalAttr, ESLM, ESLC,
      &     Tau0FullDomainMin, Tau0FullDomainMax, Z0b_var,
 C ....DW
-     &     LoadAbsLayerSigma, FoundAbsLayerSigma 
+     &     LoadAbsLayerSigma, FoundAbsLayerSigma, 
+C ....SB
+     &     PrepSmoothingNodePairsTangentVector,
+     &     LoadSmoothingNodePairs, NListSmoothingNodePairs,
+     &     NNodesListSmoothingNodePairs, ListSmoothingNodePairs
       USE SPONGELAYER, ONLY: SpongeLayerRelatedPrep, FLAGSPONGEELEM
 C ... END DW
       USE Couple2BC3D, ONLY: BC3D_DT, DTIME1, DTIME2, ALLOC_BC3D_to_2D, 
@@ -149,7 +153,7 @@ Casey 180318: Added NWS=13
       REAL(SZ) RampVal
       CHARACTER(len=80) :: CDUM80
       LOGICAL fileFound
-      INTEGER :: I, J, JKI, JJ, NP2, IDENsign
+      INTEGER :: I, J, K, JKI, JJ, NP2, IDENsign
       integer :: yyyy,mon,dd,hh,minu
 C
       !jgf51.52.35: for log messages about IDEN
@@ -2879,6 +2883,10 @@ C     the beginning of this subroutine.)
 C     jgf51.12.13: Adjust node table based on ics, nolifa, h0,
 C     slam0, sfea0. Check for sufficient precision. Compute neighbor table.
       call initializeMesh()
+
+CSB.. Parepare smoothing node pairs data, which require coorinate info
+      call PrepSmoothingNodePairsTangentVector()
+C....
             
 C   For Sponge layer
       IF ( LoadAbsLayerSigma .AND. FoundAbsLayerSigma ) THEN
@@ -3177,6 +3185,16 @@ C......DW, Dec 2019
          ENDIF
 C......DW
       ENDIF
+C......SB, zero-out corif at 1d channel nodes, 3/7/2022
+      IF (LoadSmoothingNodePairs) THEN
+         DO K=1,NListSmoothingNodePairs
+            DO J=1,NNodesListSmoothingNodePairs(K)
+               I = ListSmoothingNodePairs(K,J)
+               CORIF(I) = 0.D0
+            END DO
+         END DO
+      ENDIF
+C......SB
 
       IF(NCOR.EQ.0) THEN
          WRITE(16,12) CORI

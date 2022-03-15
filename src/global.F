@@ -321,6 +321,7 @@ Cobell -  Added the following for output of ESL at end of run
       REAL(SZ),ALLOCATABLE ::   TEMP_LV_A(:,:),TEMP_LV_B(:,:)
       REAL(SZ),ALLOCATABLE ::   QN0(:),QN1(:)
       REAL(SZ),ALLOCATABLE, TARGET :: QN2(:)
+      REAL(SZ),ALLOCATABLE, TARGET :: QJ2(:)
       REAL(SZ),ALLOCATABLE ::   EN0(:),EN1(:),EN2(:)
       REAL(SZ),ALLOCATABLE ::   QNAM(:,:),QNPH(:,:)
       REAL(SZ),ALLOCATABLE ::   ENAM(:,:),ENPH(:,:)
@@ -825,8 +826,10 @@ C     v49.48.01 tcm 20110126 Variables related to kdtree searches
       logical :: usingDynamicWaterLevelCorrection = .false.
       real(sz), allocatable, target :: dynamicWaterLevelCorrectionSta(:)
 
-! C---- Tangent vectors along smoothing node pairs, later used in momentum.F
-!       real(sz), allocatable :: SmoothingNodePairsTangentVec(:,:)
+C---- Unit vectors in the direction normal to the vector from one node of 
+C     smoothing node pairs to the other (= channel flow direction),
+C     later used in momentum.F
+      real(sz), allocatable :: SmoothingNodePairsTangentVec(:,:)
       
 C----- DW --- periodic bc 
       INTEGER:: NPERSEG, NNPERBC
@@ -1164,6 +1167,8 @@ C
       ALLOCATE ( ETA1(MNP),ETA2(MNP))
       eta1(:) = -99999.d0
       eta2(:) = -99999.d0
+      ALLOCATE ( QJ2(MNP) )
+      qj2(:) = -99999.d0
       ALLOCATE ( CORIF(MNP))
       corif(:) = -99999.d0      
       ALLOCATE ( NODECODE(MNP))
@@ -1199,9 +1204,9 @@ C    loadEleSlopeLim.eqv..true
       ALLOCATE (ESLCOUNT(MNP))
       ESLCOUNT = 0.d0
 
-! C     For smoothing node pairs
-!       ALLOCATE (SmoothingNodePairsTangentVec(MNP,:))
-!       SmoothingNodePairsTangentVec = 1.d0
+C     For smoothing node pairs
+      ALLOCATE (SmoothingNodePairsTangentVec(MNP,2))
+      SmoothingNodePairsTangentVec(:,:) = 0.d0
 
 #ifdef CMPI
       ALLOCATE ( IDUMY(1), DUMY1(1), DUMY2(1) )

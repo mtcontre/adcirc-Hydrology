@@ -129,7 +129,8 @@ CWET...
       use messenger
 #endif
       use mesh, only : ne, np, dp, mju, totalArea, nm, x, y, areas ,
-     &   htp1,htp2,LBArray_Pointer
+     &   htp1,htp2,LBArray_Pointer,node_dict
+      use hashtable
       use nodalattributes, only : BFCdLLimit, fgamma, ftheta, fric,
      &   manningsn, hbreak, ifhybf, ifnlbf, iflinbf, loadManningsN,
      &   loadZ0B_var, z0b_var,
@@ -220,16 +221,15 @@ CSB...
          DO I=1,NP
             IF(LBArray_Pointer(I).GT.0) THEN
                J = LBArray_Pointer(I)
-               IF((ISSUBMERGED64(J).GT.0).AND.
-     &            (NNODECODE(I).EQ.0)) THEN
-                  NNODECODE(I)=1
-                  NODECODE(I)=1
-                  NCCHANGE=NCCHANGE+1 !NCCHANGE=0 set near beginning of GWCE
-
+               IF((ISSUBMERGED64(J).GT.0).AND.(NNODECODE(I).EQ.0)) THEN
                   NNBB2=IBCONN(J)
                   ETA2(I) = ETA2(NNBB2)
                   HTOT=DP(I)+ETA2(I)
-                  IF(HTOT.LT.HABSMIN) ETA2(I)=HABSMIN-DP(I)
+                  IF(HTOT.GT.HOFF) THEN
+                     NNODECODE(I)=1
+                     NODECODE(I)=1
+                     NCCHANGE=NCCHANGE+1 !NCCHANGE=0 set near beginning of GWCE
+                  ENDIF
                ENDIF
             ENDIF
          ENDDO
@@ -483,7 +483,7 @@ C>>
                         TKWET=FRIC(NM123)*(IFLINBF+(VELMIN/H1)*
      &                    (IFNLBF+IFHYBF*
      &                    (1.D0+(HBREAK/H1)**FTHETA)**(FGAMMA/FTHETA)))
-                       IF(TKWET.LT.0.0001d0) TKWET=0.0001d0
+                        IF(TKWET.LT.0.0001d0) TKWET=0.0001d0
                        VEL=G*(DELETA/DELDIST)/TKWET
                      ELSEIF(C3D)THEN
 C solve for the depth averaged velocity,U, from the relation :

@@ -386,7 +386,7 @@ C----------------------------------------------------------------------
      &   dynamicWaterLevelCorrectionSpoolCounter, dynamicWaterLevelCorrection2, 
      &   usingdynamicWaterLevelCorrection, dynamicWaterLevelCorrectionStaSpoolCounter, 
      &   dynamicWaterLevelCorrectionFilePos, dynamicWaterLevelCorrectionSta,
-     &   dynamicWaterLevelCorrectionStaFilePos, PRBCKGRND
+     &   dynamicWaterLevelCorrectionStaFilePos, PRBCKGRND, qj2
 #ifdef CMASSCHECK
      &   , errMassSumSpoolCounter, errMassMaxSpoolCounter
      &   , errMassSumFilePos, errMassMaxFilePos
@@ -626,6 +626,7 @@ C
       ElevDescript % spoolCounter            => NSCOUGE
       ElevDescript % filepos                 => IGEP
       ElevDescript % array                => ETA2
+      ! ElevDescript % array                => QJ2
       ElevDescript % array_g              => ETA2_g
       ElevDescript % ConsiderWetDry       = .TRUE.
       ElevDescript % field_name           = 'Elev'

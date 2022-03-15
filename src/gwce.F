@@ -233,7 +233,7 @@ C
      &   TKM, NPERSEG, NTIP, NNPERBC, IPERCONN, VIDispDXOH, Bd, Ad, Cs2,
      &   VIDispDYOH, IFSFM, IFNL_HDP, CGWCE_HDP, CAliDisp, 
      &   usingDynamicWaterLevelCorrection, dynamicWaterLevelCorrection1,
-     &   COEFDTemp
+     &   COEFDTemp, QJ2
 #ifdef CMPI
      &    , dumy1, dumy2, rnp_global
 #endif
@@ -1578,7 +1578,10 @@ C...  flux that  is positive out of the domain.  Therefore, to match
 C...  the formulation these terms must be explicitly multiplied by -1.
 
 C...Note 3, Eta1 is the latest computed elevation (it was updated above).
-
+      ! DO I=1,NP
+      !    QJ2(I) = 0.D0
+      ! ENDDO
+      
       IF((NFLUXF.EQ.1).OR.(NFLUXB.EQ.1).OR.(NFLUXIB.EQ.1)
      &     .OR.(NFLUXGBC.EQ.1).OR.(NFLUXRBC.EQ.1)) THEN
          NBDJ=NBV(1)
@@ -1667,9 +1670,13 @@ C     jgf46.21 Added IBTYPE=52
      &                              + BndLenO6NC*(2.d0*QForceI+QForceJ)
             GWCE_LV(NBDJ)=GWCE_LV(NBDJ)
      &                              + BndLenO6NC*(2.d0*QForceJ+QForceI)
+            ! QJ2(NBDI) = QJ2(NBDI) + BndLenO6NC*(2.d0*QForceI+QForceJ)
+            ! QJ2(NBDJ) = QJ2(NBDJ) + BndLenO6NC*(2.d0*QForceJ+QForceI)
           ENDDO
         ENDIF
-
+      !   IF(QJ2(16).NE.0.D0.OR.QJ2(504).NE.0.D0) THEN
+      !     WRITE(*,'(A,E12.4,E12.4)') 'QJ2(16),QJ2(504)=',QJ2(16),QJ2(504)
+      !   ENDIF
 C..... DW
       CALL UPDATE_RHS_SLPERBC() ;
 C..... DW

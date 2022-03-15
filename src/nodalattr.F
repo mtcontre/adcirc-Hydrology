@@ -1390,7 +1390,7 @@ Corbitt 120321: Allow Advection to be handled locally instead of globally.
             ENDIF
          CASE("smoothing_node_pairs")
             IF (LoadSmoothingNodePairs) THEN
-               CALL LoadAttrMatInt(SmoothingNodePairs,
+               CALL LoadAttrMatNodeNo(SmoothingNodePairs,
      &              SmoothingNodePairsNoOfVals,
      &              SmoothingNodePairsDefVal,
      &              NumNodesNotDefault, NScreen, MyProc, NAbOut)
@@ -1619,17 +1619,17 @@ C     ----------------------------------------------------------------
 
 
 C     ----------------------------------------------------------------
-C         S U B R O U T I N E     L O A D  A T T R  M A T  I N T
+C         S U B R O U T I N E     L O A D  A T T R  M A T  N O D E  N O
 C     ----------------------------------------------------------------
 C
 C     Subroutine to load a single set of nodal attributes from
 C     the Nodal Attributes File (unit 13) if there is more than one
 C     value per node.
 C
-C     Added for integer nodal attributes. Based on LoadAttrMat. SB
+C     Added for integer node no attributes. Based on LoadAttrMat. SB
 C
 C     ----------------------------------------------------------------
-      SUBROUTINE LoadAttrMatInt(AttributeData, NumCol, Default,
+      SUBROUTINE LoadAttrMatNodeNo(AttributeData, NumCol, Default,
      &     NumNodesNotDef, NScreen, MyProc, NAbOut, NodesNotDef )
       USE MESH,ONLY:node_dict,find
       IMPLICIT NONE
@@ -1641,7 +1641,7 @@ C     ----------------------------------------------------------------
       INTEGER, intent(in) :: NScreen ! 1 for debug info to screen (unit 6)
       INTEGER, intent(in) :: MyProc  ! in parallel, only MyProc=0 i/o to screen
       INTEGER, intent(in) :: NAbOut  ! 1 to abbrev. output to unit 16
-      INTEGER            :: TempAttData(NumCol) 
+      INTEGER             :: TempAttData(NumCol) 
       INTEGER             :: NodeNum ! node label listed in the file
       INTEGER             :: DictNode ! node position in array
 C------ DW
@@ -1661,6 +1661,9 @@ C
       DO i=1, NumNodesNotDef
          READ(13,*) NodeNum, (TempAttData(j),j=1,NumCol)
          DictNode = find(node_dict,NodeNum)
+         DO j=1,NumCol
+            TempAttData(j) = find(node_dict,TempAttData(j))
+         END DO
          IF ( present(NodesNotDef) ) THEN
             NodesNotDef(i) = DictNode 
          END IF
@@ -1677,7 +1680,7 @@ C
 C
       RETURN
 C     ----------------------------------------------------------------
-      END SUBROUTINE LoadAttrMatInt
+      END SUBROUTINE LoadAttrMatNODENO
 C     ----------------------------------------------------------------
 
 
@@ -2844,9 +2847,10 @@ C     Parepare list of smoothing node pairs
 C     ----------------------------------------------------------------
       SUBROUTINE PrepSmoothingNodePairs()
 C     ----------------------------------------------------------------
+      USE SIZES, ONLY : SZ
       USE MESH, ONLY : NP
-      IMPLICIT NONE 
-      INTEGER I,J,K
+      IMPLICIT NONE
+      INTEGER I,J,K,II
       INTEGER JMAX
 
       NListSmoothingNodePairs = 0
@@ -2866,18 +2870,61 @@ C     ----------------------------------------------------------------
 
       K = 0
       DO I=1,NP
-         IF(SmoothingNodePairs(I,1).NE.0) THEN
+         IF(SmoothingNodePairs(I,1).GT.0) THEN
             K = K + 1
             ListSmoothingNodePairs(K,1) = I
             DO J=1,SmoothingNodePairsNoOfVals
                IF(SmoothingNodePairs(I,J).EQ.0) EXIT
-               ListSmoothingNodePairs(K,J+1) = SmoothingNodePairs(I,J)
+               II = SmoothingNodePairs(I,J)
+               ListSmoothingNodePairs(K,J+1) = II
                NNodesListSmoothingNodePairs(K) = J+1
+               SmoothingNodePairs(II,1) = -1 ! Flag to tell that node II is one of smoothing node pair nodes
             ENDDO
          ENDIF
       ENDDO
 
       END SUBROUTINE PrepSmoothingNodePairs
+C     ----------------------------------------------------------------
+
+C     ----------------------------------------------------------------
+C        S U B R O U T I N E   P R E P  S M O O T H I N G  N O D E  P A I R S
+C                              T A N G E N T  V E C T O R
+C     ----------------------------------------------------------------
+C     Parepare tangent vectors at smoothing node pairs
+C     ----------------------------------------------------------------
+      SUBROUTINE PrepSmoothingNodePairsTangentVector()
+C     ----------------------------------------------------------------
+      USE SIZES, ONLY : SZ
+      USE GLOBAL, ONLY : SmoothingNodePairsTangentVec
+      USE MESH, ONLY : NP, X, Y, SFMX
+      IMPLICIT NONE
+      REAL(SZ) X1, X2, Y1, Y2, XL, CS, SI
+      INTEGER I,K,II
+
+      DO K=1,NListSmoothingNodePairs
+         IF(NNodesListSmoothingNodePairs(K).EQ.2) THEN ! Assign tangent vec only if two nodes are assigned.
+            I  = ListSmoothingNodePairs(K,1)
+            II = ListSmoothingNodePairs(K,2)
+            X1 = X(I)
+            Y1 = Y(I)
+            X2 = X(II)
+            Y2 = Y(II)
+            XL = SQRT((X1-X2)**2+(Y1-Y2)**2)
+
+            CS = SFMX(I)*(Y1-Y2)/XL
+            SI = (X2-X1)/XL
+            SmoothingNodePairsTangentVec(I,1) = CS
+            SmoothingNodePairsTangentVec(I,2) = SI
+
+            CS = SFMX(II)*(Y1-Y2)/XL
+            ! SI = (X2-X1)/XL  ! SI is the same
+            SmoothingNodePairsTangentVec(II,1) = CS
+            SmoothingNodePairsTangentVec(II,2) = SI
+
+         ENDIF
+      ENDDO
+
+      END SUBROUTINE PrepSmoothingNodePairsTangentVector
 C     ----------------------------------------------------------------
 
 

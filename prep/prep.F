@@ -1664,7 +1664,9 @@ C
                      INDX = LBINDEX_LG(K,I)
                      WRITE(14,82) LABELS(IMAP_NOD_LG(NBVVP(K,I),IPROC)),
      &                        LABELS(IMAP_NOD_LG(IBCONNRP(K,I),IPROC)),
-     &                        BAR1(K,INDX),BAR2(K,INDX),BAR3(K,INDX)
+   !   &                        BAR1(K,INDX),BAR2(K,INDX),BAR3(K,INDX)
+     &                        CEILING(BAR1(K,INDX)*10000.D0)/10000.D0,
+     &                        BAR2(K,INDX),BAR3(K,INDX)
                   ENDDO
                case(5,25)
                   DO I = 1,NVELLP(K)

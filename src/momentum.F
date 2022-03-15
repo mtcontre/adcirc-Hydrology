@@ -152,7 +152,8 @@ C*******************************************************************************
      &  VIDBCPDYOH, QN2, MOM_LV_X, MOM_LV_Y, TKM, NPERSEG, NNPERBC, 
      &  IPERCONN, VIDispDXOH, VIDispDYOH, IFSFM, adcirc_norm2, CAliDisp,
      &  usingDynamicWaterLevelCorrection, Cs2, Ad, Bd, G,
-     &  dynamicWaterLevelCorrection1, dynamicWaterLevelCorrection2
+     &  dynamicWaterLevelCorrection1, dynamicWaterLevelCorrection2,
+     &  SmoothingNodePairsTangentVec
       USE MESH, ONLY : NE, NP, NM, DP, Areas, TotalArea, HTP1, HTP2,
      &     NNeigh, NeiTab, NeiTabEle, MJU, FDXE, FDYE,
      &     SWITCH_ELTAB_PERBC, SFacEle, SFMYEle, SFMXEle, TANPHI,
@@ -164,7 +165,7 @@ C*******************************************************************************
      &     NOLIBF,
      &     LoadAbsLayerSigma, absorblayer_sigma_eta,
      &     absorblayer_sigma_mnx, absorblayer_sigma_mny,
-     &     LoadSmoothingNodePairs,
+     &     LoadSmoothingNodePairs, SmoothingNodePairs,
      &     ListSmoothingNodePairs, NListSmoothingNodePairs,
      &     NNodesListSmoothingNodePairs
       USE SUBDOMAIN, ONLY : subdomainOn, enforceBN, enforceUVOB, 
@@ -226,6 +227,9 @@ C..... SB
       INTEGER:: WFP1, WFP2 ! NO WET FLOODPLAIN ATTACHED TO SMOOTHING PAIR NODE
       REAL(SZ):: fBUF, fBUF1, fBUF2, X1, Y1, X2, Y2, XL, SI, CS
       REAL(SZ):: COEFIB64
+      REAL(SZ):: CSCS1, CSSI1, SISI1 ! cos*cos, cos*sin (=sin*cos), sin*sin
+      REAL(SZ):: CSCS2, CSSI2, SISI2 ! cos*cos, cos*sin (=sin*cos), sin*sin
+      REAL(SZ):: CSCS3, CSSI3, SISI3 ! cos*cos, cos*sin (=sin*cos), sin*sin
 C.....
       call setMessageSource("mom_eqs_new_nc")
 #if defined(TIMESTEP_TRACE) || defined(ALL_TRACE)
@@ -308,6 +312,40 @@ C..... DW
          FDY2 = FDYE(2,IE)*sfdyfac ; !c FDY2=(X(NM1)-X(NM3))*MY !a2*my
          FDY3 = FDYE(3,IE)*sfdyfac ; !c FDY3=(X(NM2)-X(NM1))*MY !a3*my         
 C..... DW
+
+C..... SB
+         IF(SmoothingNodePairs(NM1,1).NE.0) THEN
+            CS = SmoothingNodePairsTangentVec(NM1,1)
+            SI = SmoothingNodePairsTangentVec(NM1,2)
+            CSCS1 = CS*CS
+            CSSI1 = CS*SI
+            SISI1 = SI*SI
+
+            CS = SmoothingNodePairsTangentVec(NM2,1)
+            SI = SmoothingNodePairsTangentVec(NM2,2)
+            CSCS2 = CS*CS
+            CSSI2 = CS*SI
+            SISI2 = SI*SI
+
+            CS = SmoothingNodePairsTangentVec(NM3,1)
+            SI = SmoothingNodePairsTangentVec(NM3,2)
+            CSCS3 = CS*CS
+            CSSI3 = CS*SI
+            SISI3 = SI*SI
+         ELSE
+            CSCS1 = 1.D0
+            CSSI1 = 0.D0
+            SISI1 = 1.D0
+
+            CSCS2 = 1.D0
+            CSSI2 = 0.D0
+            SISI2 = 1.D0
+
+            CSCS3 = 1.D0
+            CSSI3 = 0.D0
+            SISI3 = 1.D0
+         ENDIF
+C..... SB
 
 C...  Compute element averaged quantities
 
@@ -537,7 +575,8 @@ C...  TEMP_LV_A VECTOR FOR NODE NM1
 
          TEMP_LV_A1=NCEle*DT*(
 C...  ADVECTIVE TERMS
-     &             -IFNLCT*(U1AvgDU1DXA+V1AvgDU1DYA)
+     &             -IFNLCT*((U1AvgDU1DXA+V1AvgDU1DYA)*CSCS1+
+     &                      (U1AvgDV1DXA+V1AvgDV1DYA)*CSSI1)
 C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
      &             -GO2*DBTPDXA - DBCPDX1A
 C...  LATERAL VISCOUS TERMS
@@ -552,7 +591,8 @@ C...  TEMP_LV_A VECTOR FOR NODE NM2
 C...
          TEMP_LV_A2=NCEle*DT*(
 C...  ADVECTIVE TERMS
-     &             -IFNLCT*(U1AvgDU1DXA+V1AvgDU1DYA)
+     &             -IFNLCT*((U1AvgDU1DXA+V1AvgDU1DYA)*CSCS2+
+     &                      (U1AvgDV1DXA+V1AvgDV1DYA)*CSSI2)
 C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
      &             -GO2*DBTPDXA - DBCPDX2A
 C...  LATERAL VISCOUS TERMS
@@ -567,7 +607,8 @@ C...  TEMP_LV_A VECTOR FOR NODE NM3
 C...
          TEMP_LV_A3=NCEle*DT*(
 C...  ADVECTIVE TERMS
-     &             -IFNLCT*(U1AvgDU1DXA+V1AvgDU1DYA)
+     &             -IFNLCT*((U1AvgDU1DXA+V1AvgDU1DYA)*CSCS3+
+     &                      (U1AvgDV1DXA+V1AvgDV1DYA)*CSSI3)
 C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
      &             -GO2*DBTPDXA - DBCPDX3A
 C...  LATERAL VISCOUS TERMS
@@ -581,7 +622,8 @@ C...  TEMP_LV_B VECTOR FOR NODE NM1
 
          TEMP_LV_B1=NCEle*DT*(
 C...  ADVECTIVE TERMS
-     &             -IFNLCT*(U1AvgDV1DXA+V1AvgDV1DYA)
+     &             -IFNLCT*((U1AvgDU1DXA+V1AvgDU1DYA)*CSSI1+
+     &                      (U1AvgDV1DXA+V1AvgDV1DYA)*SISI1)
 C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
      &             -GO2*DBTPDYA - DBCPDY1A
 C...  LATERAL VISCOUS TERMS
@@ -596,7 +638,8 @@ C...  TEMP_LV_B VECTOR FOR NODE NM2
 
          TEMP_LV_B2=NCEle*DT*(
 C...  ADVECTIVE TERMS
-     &             -IFNLCT*(U1AvgDV1DXA+V1AvgDV1DYA)
+     &             -IFNLCT*((U1AvgDU1DXA+V1AvgDU1DYA)*CSSI2+
+     &                      (U1AvgDV1DXA+V1AvgDV1DYA)*SISI2)
 C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
      &             -GO2*DBTPDYA - DBCPDY2A
 C...  LATERAL VISCOUS TERMS
@@ -610,7 +653,8 @@ C...  TEMP_LV_B VECTOR FOR NODE NM3
 
          TEMP_LV_B3=NCEle*DT*(
 C...  ADVECTIVE TERMS
-     &             -IFNLCT*(U1AvgDV1DXA+V1AvgDV1DYA)
+     &             -IFNLCT*((U1AvgDU1DXA+V1AvgDU1DYA)*CSSI3+
+     &                      (U1AvgDV1DXA+V1AvgDV1DYA)*SISI3)
 C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
      &             -GO2*DBTPDYA - DBCPDY3A
 C...  LATERAL VISCOUS TERMS
@@ -1115,14 +1159,14 @@ C.... the IBTYPE=64 internal barrier boundary. The ISSUBMERGED64 value is non ze
 C.... only when the node belongs to a IBTYPE=64 internal barrier boundary and
 C.... the water elevation at the node is higher than the weir height on both sides
 C.... of the weir.
-      write(6,'(A,I4,I4,I4,F6.2,I8,I4)') 'ibarray_pointer(1),issubmerged64(.)=',
-     &  lbarray_pointer(1),issubmerged64(lbarray_pointer(1)),
-     &  nodecode(lbarray_pointer(1)), eta2(1),
-     &  IBCONN(lbarray_pointer(1)),nodecode(IBCONN(lbarray_pointer(1)))
-      write(6,'(A,I4,I4,I4,F6.2,I8,I4)') 'ibarray_pointer(2),issubmerged64(.)=',
-     &  lbarray_pointer(2),issubmerged64(lbarray_pointer(2)),
-     &  nodecode(lbarray_pointer(2)), eta2(2),
-     &  IBCONN(lbarray_pointer(2)),nodecode(IBCONN(lbarray_pointer(2)))
+   !    write(6,'(A,I4,I4,I4,F6.2,I8,I4)') 'ibarray_pointer(1),issubmerged64(.)=',
+   !   &  lbarray_pointer(1),issubmerged64(lbarray_pointer(1)),
+   !   &  nodecode(lbarray_pointer(1)), eta2(1),
+   !   &  IBCONN(lbarray_pointer(1)),nodecode(IBCONN(lbarray_pointer(1)))
+   !    write(6,'(A,I4,I4,I4,F6.2,I8,I4)') 'ibarray_pointer(2),issubmerged64(.)=',
+   !   &  lbarray_pointer(2),issubmerged64(lbarray_pointer(2)),
+   !   &  nodecode(lbarray_pointer(2)), eta2(2),
+   !   &  IBCONN(lbarray_pointer(2)),nodecode(IBCONN(lbarray_pointer(2)))
       IF(LoadSmoothingNodePairs) THEN
 !          DO K=1,NListSmoothingNodePairs
 !             IS1 = ListSmoothingNodePairs(K,1)
@@ -1155,53 +1199,53 @@ C.... of the weir.
 !                ENDIF
 !             ENDIF
 !          ENDDO
-         DO K=1,NListSmoothingNodePairs
-         IF(NNodesListSmoothingNodePairs(K).EQ.2) THEN
-         IS1 = ListSmoothingNodePairs(K,1)
-         IS2 = ListSmoothingNodePairs(K,2)
-         IF((NODECODE(IS1).NE.0).AND.(NODECODE(IS2).NE.0)) THEN
-            IF(LBArray_Pointer(IS1).LE.0) THEN ! IF THERE IS NO FLOODPLAIN NODE
-               WFP1 = 0
-            ELSE IF((NODECODE(IBCONN(LBArray_Pointer(IS1))).EQ.0).OR. ! IF FLOODPLAIN NODE IS DRY
-     &              (ISSUBMERGED64(LBArray_Pointer(IS1)).EQ.0)) THEN  ! AND THE BANK iS SUBMERGED
-               WFP1 = 0
-            ELSE
-               WFP1 = 1
-            ENDIF
-            IF(LBArray_Pointer(IS2).LE.0) THEN ! IF THERE IS NO FLOODPLAIN NODE
-               WFP2 = 0
-            ELSE IF((NODECODE(IBCONN(LBArray_Pointer(IS2))).EQ.0).OR. ! IF FLOODPLAIN NODE IS DRY
-     &              (ISSUBMERGED64(LBArray_Pointer(IS2)).EQ.0)) THEN  ! AND THE BANK iS SUBMERGED
-               WFP2 = 0
-            ELSE
-               WFP2 = 1
-            ENDIF
-            IF((WFP1.EQ.0).AND.(WFP2.EQ.0)) THEN  ! IF BOTH FLOODPLAIN COUNTERPART NODES OF PAIRED NODES ARE NOT WET
-!                  IF((ISSUBMERGED64(LBArray_Pointer(IS1)).EQ.0).AND.
-!     &               (ISSUBMERGED64(LBArray_Pointer(IS2)).EQ.0)) THEN
-!                  IF((NODECODE(IBCONN(LBArray_Pointer(IS1))).EQ.0).AND.
-!     &               (NODECODE(IBCONN(LBArray_Pointer(IS2))).EQ.0)) THEN
-               X1 = X(IS1)
-               Y1 = Y(IS1)
-               X2 = X(IS2)
-               Y2 = Y(IS2)
-               XL = SQRT((X1-X2)**2+(Y1-Y2)**2)
-               CS = (X1-X2)/XL
-               SI = SFMX(IS1)*(Y1-Y2)/XL
+!          DO K=1,NListSmoothingNodePairs
+!          IF(NNodesListSmoothingNodePairs(K).EQ.2) THEN
+!          IS1 = ListSmoothingNodePairs(K,1)
+!          IS2 = ListSmoothingNodePairs(K,2)
+!          IF((NODECODE(IS1).NE.0).AND.(NODECODE(IS2).NE.0)) THEN
+!             IF(LBArray_Pointer(IS1).LE.0) THEN ! IF THERE IS NO FLOODPLAIN NODE
+!                WFP1 = 0
+!             ELSE IF((NODECODE(IBCONN(LBArray_Pointer(IS1))).EQ.0).OR. ! IF FLOODPLAIN NODE IS DRY
+!      &              (ISSUBMERGED64(LBArray_Pointer(IS1)).EQ.0)) THEN  ! AND THE BANK iS SUBMERGED
+!                WFP1 = 0
+!             ELSE
+!                WFP1 = 1
+!             ENDIF
+!             IF(LBArray_Pointer(IS2).LE.0) THEN ! IF THERE IS NO FLOODPLAIN NODE
+!                WFP2 = 0
+!             ELSE IF((NODECODE(IBCONN(LBArray_Pointer(IS2))).EQ.0).OR. ! IF FLOODPLAIN NODE IS DRY
+!      &              (ISSUBMERGED64(LBArray_Pointer(IS2)).EQ.0)) THEN  ! AND THE BANK iS SUBMERGED
+!                WFP2 = 0
+!             ELSE
+!                WFP2 = 1
+!             ENDIF
+!             IF((WFP1.EQ.0).AND.(WFP2.EQ.0)) THEN  ! IF BOTH FLOODPLAIN COUNTERPART NODES OF PAIRED NODES ARE NOT WET
+! !                  IF((ISSUBMERGED64(LBArray_Pointer(IS1)).EQ.0).AND.
+! !     &               (ISSUBMERGED64(LBArray_Pointer(IS2)).EQ.0)) THEN
+! !                  IF((NODECODE(IBCONN(LBArray_Pointer(IS1))).EQ.0).AND.
+! !     &               (NODECODE(IBCONN(LBArray_Pointer(IS2))).EQ.0)) THEN
+!                X1 = X(IS1)
+!                Y1 = Y(IS1)
+!                X2 = X(IS2)
+!                Y2 = Y(IS2)
+!                XL = SQRT((X1-X2)**2+(Y1-Y2)**2)
+!                CS = (X1-X2)/XL
+!                SI = SFMX(IS1)*(Y1-Y2)/XL
 
-               ! At Node IS1
-               fBUF = SI*UU2(IS1) - CS*VV2(IS1)
-               UU2(IS1) =  SI * fBUF
-               VV2(IS1) = -CS * fBUF
+!                ! At Node IS1
+!                fBUF = SI*UU2(IS1) - CS*VV2(IS1)
+!                UU2(IS1) =  SI * fBUF
+!                VV2(IS1) = -CS * fBUF
 
-               ! At Node IS2
-               fBUF = SI*UU2(IS2) - CS*VV2(IS2)
-               UU2(IS2) =  SI * fBUF
-               VV2(IS2) = -CS * fBUF
-            ENDIF
-         ENDIF
-         ENDIF
-         ENDDO
+!                ! At Node IS2
+!                fBUF = SI*UU2(IS2) - CS*VV2(IS2)
+!                UU2(IS2) =  SI * fBUF
+!                VV2(IS2) = -CS * fBUF
+!             ENDIF
+!          ENDIF
+!          ENDIF
+!          ENDDO
       ENDIF
 
 C...  Compute fluxes

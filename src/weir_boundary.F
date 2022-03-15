@@ -29,8 +29,8 @@ C-----------------------------------------------------------------------
             REAL(SZ),ALLOCATABLE     :: BARLANHT1(:)   !...External Barrier elevation at previous timestep
             REAL(SZ),ALLOCATABLE     :: BARLANHT2(:)   !...External Barrier elevation at current timestep
             REAL(SZ), PARAMETER      :: BARMIN=0.04D0
-            REAL(SZ), PARAMETER      :: SUBMIN64=0.5D0
-            REAL(SZ), PARAMETER      :: BARMIN64=0.0D0
+            REAL(SZ), PARAMETER      :: BARMIN64=0.04D0
+            REAL(SZ), PARAMETER      :: SUBMIN64=0.04D0
 
             !...Averaging information in time for boundaries. 
             !   This was previously zeroed out in the code, but the
@@ -2129,8 +2129,10 @@ C-----------------------------------------------------------------------
 
                 USE BOUNDARIES,ONLY:BARINCFSB,BARINCFSP,
      &              NVELL,IBCONN,BARINHT,ISSUBMERGED64,NBV
-                USE GLOBAL,ONLY:NIBNODECODE,TVW,USE_TVW,NODECODE
-                USE MESH,ONLY:LBArray_Pointer
+                USE GLOBAL,ONLY:NIBNODECODE,TVW,USE_TVW,NODECODE,
+     &                          H0  ! SB
+                USE MESH,ONLY:LBArray_Pointer,MNEI,NEITAB,NNEIGH,DP  ! SB
+                USE WETDRY,ONLY:HABSMIN  ! SB
                 IMPLICIT NONE
                 INTEGER,INTENT(IN),TARGET   :: BARRIER_INDEX
                 INTEGER,INTENT(IN),TARGET   :: BOUNDARY
@@ -2143,8 +2145,13 @@ C-----------------------------------------------------------------------
                 INTEGER                     :: NNBB1WN,NNBB2WN
                 INTEGER                     :: FLOWDIR
                 INTEGER,POINTER             :: I,J,K
-                REAL(SZ)                    :: RBARWL1,RBARWL2
+                REAL(SZ)                    :: RBARWL1,RBARWL2,RBARWLL
                 REAL(SZ)                    :: RBARWL1F,RBARWL2F
+CSB...
+                INTEGER                     :: L,M
+                REAL(SZ)                    :: RBARWLNEIMIN
+                REAL(SZ)                    :: HTOT,WETNDHTOTMIN
+CSB...
 
                 CALL setMessageSource("COMPUTE_INTERNAL_BOUNDARY_FLUX")
 #if defined(WEIR_TRACE) || defined(ALL_TRACE) 
@@ -2162,6 +2169,7 @@ C...............SIMPLIFY VARIABLES
                 NNBB1WN = 0      ! COUNT NUMBER OF WET NEIGHBORS
                 NNBB2WN = 0      ! COUNT NUMBER OF WET NEIGHBORS
                 FLOWDIR = 0      ! DIRECTION OF FLOW
+                RBARWLNEIMIN = 9999.D0 ! MINIMUM DEPTH OVER THE CREST OF NEIGHBORS SB
 
 C...............CHECK TO SEE IF THERE IS A WET EDGE
                 IF( (J.EQ.1).OR.(J.EQ.NVELL(K)+1) )THEN
@@ -2212,13 +2220,76 @@ C..............ZC - STREAMLINE THE PROCESS SINCE BARAVGWT IS ZERO BY DEFAULT
                RBARWL1=ETA2(NNBB1)-BARINHT2(I)
                RBARWL2=ETA2(NNBB2)-BARINHT2(I)
 #endif               
+C..............RBARWL on the lower ground side SB
+               IF(DP(NNBB1).GE.DP(NNBB2)) THEN
+                    RBARWLL = RBARWL1
+               ELSE
+                    RBARWLL = RBARWL2
+               ENDIF
+C...............FIND MAXIMUM DEPTH OVER THE CREST OF NEIGHBORS SB
+                IF( (J.EQ.1).OR.(J.EQ.NVELL(K)+1) )THEN
+                    RBARWLNEIMIN=
+     &                MIN(RBARWLNEIMIN,
+     &                    ETA2(NBV(I+1))-BARINHT2(I+1),
+     &                    ETA2(IBCONN(I+1))-BARINHT2(I+1))
+                ELSE
+                    IF( J.EQ.NVELL(K).OR.(J.EQ.NVELL(K)*2) ) THEN
+                        RBARWLNEIMIN=
+     &                    MIN(RBARWLNEIMIN,
+     &                        ETA2(NBV(I-1))-BARINHT2(I-1),
+     &                        ETA2(IBCONN(I-1))-BARINHT2(I-1))
+                    ELSE
+                        RBARWLNEIMIN=
+     &                    MIN(RBARWLNEIMIN,
+     &                        ETA2(NBV(I-1))-BARINHT2(I-1),
+     &                        ETA2(NBV(I+1))-BARINHT2(I+1),
+     &                        ETA2(IBCONN(I-1))-BARINHT2(I-1),
+     &                        ETA2(IBCONN(I+1))-BARINHT2(I+1))
+                    ENDIF
+                ENDIF
+
+                ! Identify the minimum water depth among the "WET" neighbor nodes
+                WETNDHTOTMIN = 9999.D0
+                DO L=1,NNEIGH(NNBB1)
+                    M = NEITAB(NNBB1,L)
+                    IF(NODECODE(M).EQ.1) THEN
+                        HTOT = DP(M) + ETA2(M)
+                    ELSE
+                        HTOT = 9999.D0
+                    ENDIF
+                    WETNDHTOTMIN = MIN(WETNDHTOTMIN,HTOT)
+                ENDDO
+                DO L=1,NNEIGH(NNBB2)
+                    M = NEITAB(NNBB2,L)
+                    IF(NODECODE(M).EQ.1) THEN
+                        HTOT = DP(M) + ETA2(M)
+                    ELSE
+                        HTOT = 9999.D0
+                    ENDIF
+                    WETNDHTOTMIN = MIN(WETNDHTOTMIN,HTOT)
+                ENDDO
+
                RBARWL1F=2.D0*RBARWL1/3.D0
                RBARWL2F=2.D0*RBARWL2/3.D0
                FLUX=0.D0
                ISSUBMERGED64(I) = 0
                ISSUBMERGED64(LBArray_Pointer(NNBB2)) = 0
 
-               IF((RBARWL1.GT.SUBMIN64).AND.(RBARWL2.GT.SUBMIN64)) THEN
+            !    IF(WETNDHTOTMIN.LT.H0.AND..FALSE.) THEN
+            !     FLUX = 0
+            !     WRITE(*,*) 'WETNDHTOTMIN.LT.H0 AT ', NNBB1
+                !   IF((RBARWL1.GT.SUBMIN64).AND.(RBARWL2.GT.SUBMIN64)) THEN
+                !   IF((RBARWL1.GE.H0).OR.(RBARWL2.GE.H0)) THEN
+    !            ELSE IF((RBARWL1.GT.H0*2.D0).AND.(RBARWL2.GT.H0*2.D0)
+            !    IF(RBARWL2.GE.H0.AND.(WETNDHTOTMIN.GE.H0)) THEN
+            !    IF(RBARWLL.GE.H0.AND.(WETNDHTOTMIN.GE.H0)) THEN
+               IF(RBARWLL.GE.0.D0) THEN
+
+            !    IF((RBARWL1.GT.0.D0).AND.(RBARWL2.GT.0.D0)) THEN
+                !            IF((RBARWL1.GT.SUBMIN64).AND.(RBARWL2.GT.SUBMIN64)
+    !  &           .AND.(WETNDHTOTMIN.GT.H0)) THEN
+!               IF((RBARWL1.GT.SUBMIN64).AND.(RBARWL2.GT.SUBMIN64)
+!     &            .AND.(RBARWLNEIMIN.GT.SUBMIN64)) THEN
 C...............THIS IS THE MAJOR DIFFERENCE OF IBTYPE=64 FROM IBTYPE=24.
 C               WATER LEVEL ON BOTH SIDES OF BARRIER ABOVE BARRIER -> CASE 0
                   FLUX = 0.D0
@@ -2231,7 +2302,7 @@ C...............WATER LEVEL ON BOTH SIDES OF BARRIER BELOW BARRIER -> CASE 1
                   FLUX=0.D0
                   IF(NNBB1.EQ.1581)
      &              WRITE(*,'(A,F,F)') 'CASE 1: ', BARINCFSB(I), BARINCFSP(I)
-               ELSEIF(ABS(RBARWL1-RBARWL2).LT.0.0D0) THEN
+               ELSEIF(ABS(RBARWL1-RBARWL2).LT.0.01D0) THEN
 C...............WATER LEVEL EQUAL ON BOTH SIDES OF BARRIER
 C................TO WITHIN TOLERANCE BARMIN -> CASE 2
                   FLUX=0.D0
@@ -2257,7 +2328,7 @@ C..................OUTWARD SUBCRITICAL FLOW -> CASE 3
                      ELSE
                         FLUX=-RampIntFlux*RBARWL2*BARINCFSB(I)*
      &                     (2.D0*G*(RBARWL1-RBARWL2))**0.5D0
-                        IF(NNBB1.EQ.1581)
+                     IF(NNBB1.EQ.1581)
      &              WRITE(*,'(A,F,F)') 'CASE 3b: ', BARINCFSB(I), BARINCFSP(I)
                      ENDIF
                   ELSE
@@ -2300,7 +2371,7 @@ C..................INWARD SUBCRITICAL FLOW -> CASE 5
                      ELSE
                         FLUX=RampIntFlux*RBARWL1*BARINCFSB(I)*
      &                     (2.0D0*G*(RBARWL2-RBARWL1))**0.5D0
-                        NIBNODECODE(NNBB1)=1
+                        ! NIBNODECODE(NNBB1)=1
                         IF(NNBB1.EQ.1581)
      &              WRITE(*,'(A,F,F)') 'CASE 5b: ', BARINCFSB(I), BARINCFSP(I)
                      ENDIF
@@ -2313,7 +2384,7 @@ C..................INWARD SUPERCRITICAL FLOW -> CASE 6
                      ELSE
                         FLUX=RampIntFlux*BARINCFSP(I)*RBARWL2F*
      &                     (RBARWL2F*G)**0.5D0
-                        NIBNODECODE(NNBB1)=1
+                        ! NIBNODECODE(NNBB1)=1
                         IF(NNBB1.EQ.1581)
      &              WRITE(*,'(A,F,F)') 'CASE 6b: ', BARINCFSB(I), BARINCFSP(I)
                      ENDIF
@@ -2322,6 +2393,13 @@ C..................INWARD SUPERCRITICAL FLOW -> CASE 6
                   FLUX=0
                ENDIF
                
+    !            IF(NNBB1.EQ.16.OR.NNBB1.EQ.504.OR.
+    !  &            NNBB2.EQ.16.OR.NNBB2.EQ.504) THEN
+    !               IF(FLUX.NE.0.D0) THEN
+    !                 WRITE(*,'(A,I5,I5,E11.4)') 
+    !  &                'NNBB1,NNBB2,FLUX=',NNBB1,NNBB2,FLUX
+    !               ENDIF
+    !            ENDIF 
 #if defined(WEIR_TRACE) || defined(ALL_TRACE) 
                CALL allMessage(DEBUG,"Return")
 #endif
