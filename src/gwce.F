@@ -251,9 +251,9 @@ C
      &     CalculateTimeVaryingTau0, LoadAdvectionState, advectlocal,
      &     LoadAbsLayerSigma, absorblayer_sigma_eta,
      &     absorblayer_sigma_mnx, absorblayer_sigma_mny,
-     &     LoadCondensedNodeGroup,
-     &     ListCondensedNodeGroup, NListCondensedNodeGroup,
-     &     NNodesListCondensedNodeGroup
+     &     LoadCondensedNodes,
+     &     ListCondensedNodes, NListCondensedNodes,
+     &     NNodesListCondensedNodes
       USE SPONGELAYER
 
 #ifdef CMPI
@@ -1766,22 +1766,22 @@ C     (1) FRONT SIDE TO BACK SIDE
          ENDDO
       ENDIF
 
-C.... Summing up the values at condensed node group nodes
-      IF(LoadCondensedNodeGroup) THEN
-         DO K=1,NListCondensedNodeGroup
-            I = ListCondensedNodeGroup(K,1)
+C.... Summing up the values at condensed nodes
+      IF(LoadCondensedNodes) THEN
+         DO K=1,NListCondensedNodes
+            I = ListCondensedNodes(K,1)
             IF((NODECODE(I).NE.0)) THEN
                ! 1) Sum them up
-               DO L=2,NNodesListCondensedNodeGroup(K)
-                  J = ListCondensedNodeGroup(K,L)
+               DO L=2,NNodesListCondensedNodes(K)
+                  J = ListCondensedNodes(K,L)
                   COEFDTemp(I) = COEFDTemp(I) + COEFDTemp(J)
                   GWCE_LV(I)   = GWCE_LV(I) + GWCE_LV(J)
                   ETA1(I)      = ETA1(I) + ETA1(J)
                ENDDO
                ! 2) Distribute them
-               ETA1(I) = ETA1(I) / NNodesListCondensedNodeGroup(K)
-               DO L=2,NNodesListCondensedNodeGroup(K)
-                  J = ListCondensedNodeGroup(K,L)
+               ETA1(I) = ETA1(I) / NNodesListCondensedNodes(K)
+               DO L=2,NNodesListCondensedNodes(K)
+                  J = ListCondensedNodes(K,L)
                   COEFDTemp(J) = COEFDTemp(I)
                   GWCE_LV(J)   = GWCE_LV(I)
                   ETA1(J)      = ETA1(I)

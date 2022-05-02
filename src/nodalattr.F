@@ -104,15 +104,15 @@ Corbitt 120321: Allow Advection to be Turned on Locally instead of Globally
       REAL(SZ)             :: AdvectionStateDefVal
       REAL(SZ),ALLOCATABLE :: AdvectionState(:)
 Csb   Specify node groups for 1D condensation.
-      LOGICAL              :: LoadCondensedNodeGroup
-      LOGICAL              :: FoundCondensedNodeGroup
-      CHARACTER(LEN=80)    :: CondensedNodeGroupUnits
-      INTEGER              :: CondensedNodeGroupNoOfVals
-      INTEGER              :: CondensedNodeGroupDefVal(4)
-      INTEGER,ALLOCATABLE  :: CondensedNodeGroup(:,:)
-      INTEGER,ALLOCATABLE  :: ListCondensedNodeGroup(:,:)
-      INTEGER              :: NListCondensedNodeGroup
-      INTEGER,ALLOCATABLE  :: NNodesListCondensedNodeGroup(:)
+      LOGICAL              :: LoadCondensedNodes
+      LOGICAL              :: FoundCondensedNodes
+      CHARACTER(LEN=80)    :: CondensedNodesUnits
+      INTEGER              :: CondensedNodesNoOfVals
+      INTEGER              :: CondensedNodesDefVal(4)
+      INTEGER,ALLOCATABLE  :: CondensedNodes(:,:)
+      INTEGER,ALLOCATABLE  :: ListCondensedNodes(:,:)
+      INTEGER              :: NListCondensedNodes
+      INTEGER,ALLOCATABLE  :: NNodesListCondensedNodes(:)
 C
 C     The following flags are .true. if the corresponding data are
 C     required for the run, according to the unit 15 control file
@@ -372,10 +372,10 @@ Corbitt 120321:
       AdvectionStateNoOfVals = 1
       AdvectionStateDefVal   = 0.D0
 C
-      LoadCondensedNodeGroup     = .False.
-      FoundCondensedNodeGroup    = .FALSE.
-      CondensedNodeGroupNoOfVals = 3
-      CondensedNodeGroupDefVal   = 0
+      LoadCondensedNodes     = .False.
+      FoundCondensedNodes    = .FALSE.
+      CondensedNodesNoOfVals = 3
+      CondensedNodesDefVal   = 0
 C
       LoadTau0           = .False.
       LoadStartDry       = .False.
@@ -626,8 +626,8 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
 Corbitt 120321: Allow advection to be turned on locally instead of globally
          CASE("advection_state")
             FoundAdvectionState = .TRUE.
-         CASE("condensed_node_group")
-            FoundCondensedNodeGroup = .TRUE.
+         CASE("condensed_nodes")
+            FoundCondensedNodes = .TRUE.
          CASE("elemental_slope_limiter")
             FoundEleSlopeLim = .TRUE.
          CASE("initial_river_elevation")            
@@ -786,9 +786,9 @@ Corbitt 120321: Allow Advection to be handled locally instead of globally.
             IF (LoadAdvectionState) THEN
                advectionState = na(i)%xdmfArray
             ENDIF
-         CASE("condensed_node_group")
-            IF (LoadCondensedNodeGroup) THEN
-               CondensedNodeGroup = na(i)%xdmfMatrix
+         CASE("condensed_nodes")
+            IF (LoadCondensedNodes) THEN
+               CondensedNodes = na(i)%xdmfMatrix
             ENDIF
          CASE("elemental_slope_limiter")
             IF( LoadEleSlopeLim ) THEN
@@ -860,7 +860,7 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
      &   ((LoadSwanWaveRefrac).and.(.not.FoundSwanWaveRefrac)).or.
 Corbitt 120321: Allow advection to be turned on locally instead of globally
      &   ((LoadAdvectionState).and.(.not.FoundAdvectionState)).or.
-     &   ((LoadCondensedNodeGroup).and.(.not.FoundCondensedNodeGroup)).or.
+     &   ((LoadCondensedNodes).and.(.not.FoundCondensedNodes)).or.
      &   ((LoadEleSlopeLim).and.(.not.FoundEleSlopeLim)).or.
      &   ((LoadRiver_et_WSE).and.(.not.FoundRiver_et_WSE)).or.     
      &   ((LoadIT_Fric).and.(.not.FoundIT_Fric)).or. 
@@ -904,7 +904,7 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
       ALLOCATE(SwanWaveRefrac(NumOfNodes))
 Corbitt 120321: Allow advection to be turned on locally instead of globally
       ALLOCATE(AdvectionState(NumOfNodes))
-      ALLOCATE(CondensedNodeGroup(NumOfNodes,CondensedNodeGroupNoOfVals))
+      ALLOCATE(CondensedNodes(NumOfNodes,CondensedNodesNoOfVals))
       ALLOCATE(River_et_WSE(NumOfNodes))  ! tcm 20140502 v51.27
       ALLOCATE(OverlandReductionFactor(NumOfNodes))
       ALLOCATE(elemental_slope_limiter_grad_max(NumOfNodes))
@@ -1026,8 +1026,8 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
 Corbitt 120321: Allow advection to be turned on locally instead of globally
          CASE("advection_state")
             LoadAdvectionState = .True.
-         CASE("condensed_node_group")
-            LoadCondensedNodeGroup = .True.
+         CASE("condensed_nodes")
+            LoadCondensedNodes = .True.
          CASE("elemental_slope_limiter")
             LoadEleSlopeLim = .TRUE.
          CASE("initial_river_elevation")  ! tcm 20140502 v51.27
@@ -1208,12 +1208,12 @@ Corbitt 120321: Allow advection to be turned on locally instead of globally
             READ(13,'(A80)') AdvectionStateUnits
             READ(13,*) AdvectionStateNoOfVals
             READ(13,*) AdvectionStateDefVal
-         CASE("condensed_node_group")
-            FoundCondensedNodeGroup = .TRUE.
-            READ(13,'(A80)') CondensedNodeGroupUnits
-            READ(13,*) CondensedNodeGroupNoOfVals
-            READ(13,*) (CondensedNodeGroupDefVal(j),
-     &                  j=1,CondensedNodeGroupNoOfVals)
+         CASE("condensed_nodes")
+            FoundCondensedNodes = .TRUE.
+            READ(13,'(A80)') CondensedNodesUnits
+            READ(13,*) CondensedNodesNoOfVals
+            READ(13,*) (CondensedNodesDefVal(j),
+     &                  j=1,CondensedNodesNoOfVals)
          CASE("elemental_slope_limiter")
             FoundEleSlopeLim = .TRUE.
             READ(13,'(A80)') EleSlopeLimUnits
@@ -1386,13 +1386,13 @@ Corbitt 120321: Allow Advection to be handled locally instead of globally.
             ELSE
                SkipDataSet = .TRUE.
             ENDIF
-         CASE("condensed_node_group")
-            IF (LoadCondensedNodeGroup) THEN
-               CALL LoadAttrMatNodeNo(CondensedNodeGroup,
-     &              CondensedNodeGroupNoOfVals,
-     &              CondensedNodeGroupDefVal,
+         CASE("condensed_nodes")
+            IF (LoadCondensedNodes) THEN
+               CALL LoadAttrMatNodeNo(CondensedNodes,
+     &              CondensedNodesNoOfVals,
+     &              CondensedNodesDefVal,
      &              NumNodesNotDefault, NScreen, MyProc, NAbOut)
-               CALL PrepCondensedNodeGroup()
+               CALL PrepCondensedNodes()
             ELSE
                SkipDataSet = .TRUE.
             ENDIF
@@ -2839,12 +2839,11 @@ C     ----------------------------------------------------------------
 C     ----------------------------------------------------------------
 
 C     ----------------------------------------------------------------
-C        S U B R O U T I N E   P R E P  C O N D E N S E D
-C                              N O D E  G R O U P
+C        S U B R O U T I N E   P R E P  C O N D E N S E D   N O D E S
 C     ----------------------------------------------------------------
-C     Parepare list of condensed node groups
+C     Parepare list of condensed nodes
 C     ----------------------------------------------------------------
-      SUBROUTINE PrepCondensedNodeGroup()
+      SUBROUTINE PrepCondensedNodes()
 C     ----------------------------------------------------------------
       USE SIZES, ONLY : SZ
       USE MESH, ONLY : NP
@@ -2852,58 +2851,58 @@ C     ----------------------------------------------------------------
       INTEGER I,J,K,II
       INTEGER JMAX
 
-      NListCondensedNodeGroup = 0
+      NListCondensedNodes = 0
       JMAX = 0
       DO I=1,NP
-         IF(CondensedNodeGroup(I,1).NE.0) THEN
-            NListCondensedNodeGroup = NListCondensedNodeGroup + 1
-            DO J=1,CondensedNodeGroupNoOfVals
-               IF(CondensedNodeGroup(I,J).EQ.0) EXIT
+         IF(CondensedNodes(I,1).NE.0) THEN
+            NListCondensedNodes = NListCondensedNodes + 1
+            DO J=1,CondensedNodesNoOfVals
+               IF(CondensedNodes(I,J).EQ.0) EXIT
                IF(JMAX.LT.J) JMAX = J
             ENDDO
          ENDIF
       ENDDO
 
-      ALLOCATE(ListCondensedNodeGroup(NListCondensedNodeGroup,JMAX+1))
-      ALLOCATE(NNodesListCondensedNodeGroup(NListCondensedNodeGroup))
+      ALLOCATE(ListCondensedNodes(NListCondensedNodes,JMAX+1))
+      ALLOCATE(NNodesListCondensedNodes(NListCondensedNodes))
 
       K = 0
       DO I=1,NP
-         IF(CondensedNodeGroup(I,1).GT.0) THEN
+         IF(CondensedNodes(I,1).GT.0) THEN
             K = K + 1
-            ListCondensedNodeGroup(K,1) = I
-            DO J=1,CondensedNodeGroupNoOfVals
-               IF(CondensedNodeGroup(I,J).EQ.0) EXIT
-               II = CondensedNodeGroup(I,J)
-               ListCondensedNodeGroup(K,J+1) = II
-               NNodesListCondensedNodeGroup(K) = J+1
-               CondensedNodeGroup(II,1) = -1 ! Flag to tell that node II is one of condensed nodes
+            ListCondensedNodes(K,1) = I
+            DO J=1,CondensedNodesNoOfVals
+               IF(CondensedNodes(I,J).EQ.0) EXIT
+               II = CondensedNodes(I,J)
+               ListCondensedNodes(K,J+1) = II
+               NNodesListCondensedNodes(K) = J+1
+               CondensedNodes(II,1) = -1 ! Flag to tell that node II is one of condensed nodes
             ENDDO
          ENDIF
       ENDDO
 
-      END SUBROUTINE PrepCondensedNodeGroup
+      END SUBROUTINE PrepCondensedNodes
 C     ----------------------------------------------------------------
 
 C     ----------------------------------------------------------------
-C        S U B R O U T I N E   P R E P  C O N D E S E D  G R O U P
-C                              N O D E  T A N G E N T  V E C T O R
+C        S U B R O U T I N E   P R E P  C O N D E S E D  N O D E S
+C                              T A N G E N T  V E C T O R
 C     ----------------------------------------------------------------
-C     Parepare tangent vectors at condensed node groups
+C     Parepare tangent vectors at condensed nodes
 C     ----------------------------------------------------------------
-      SUBROUTINE PrepCondensedNodeGroupTangentVector()
+      SUBROUTINE PrepCondensedNodesTangentVector()
 C     ----------------------------------------------------------------
       USE SIZES, ONLY : SZ
-      USE GLOBAL, ONLY : CondensedNodeGroupTangentVec
+      USE GLOBAL, ONLY : CondensedNodesTangentVec
       USE MESH, ONLY : NP, X, Y, SFMX
       IMPLICIT NONE
       REAL(SZ) X1, X2, Y1, Y2, XL, CS, SI
       INTEGER I,K,II
 
-      DO K=1,NListCondensedNodeGroup
-         IF(NNodesListCondensedNodeGroup(K).EQ.2) THEN ! Assign tangent vec only if two nodes are assigned.
-            I  = ListCondensedNodeGroup(K,1)
-            II = ListCondensedNodeGroup(K,2)
+      DO K=1,NListCondensedNodes
+         IF(NNodesListCondensedNodes(K).EQ.2) THEN ! Assign tangent vec only if two nodes are assigned.
+            I  = ListCondensedNodes(K,1)
+            II = ListCondensedNodes(K,2)
             X1 = X(I)
             Y1 = Y(I)
             X2 = X(II)
@@ -2912,18 +2911,18 @@ C     ----------------------------------------------------------------
 
             CS = SFMX(I)*(Y1-Y2)/XL
             SI = (X2-X1)/XL
-            CondensedNodeGroupTangentVec(I,1) = CS
-            CondensedNodeGroupTangentVec(I,2) = SI
+            CondensedNodesTangentVec(I,1) = CS
+            CondensedNodesTangentVec(I,2) = SI
 
             CS = SFMX(II)*(Y1-Y2)/XL
             ! SI = (X2-X1)/XL  ! SI is the same
-            CondensedNodeGroupTangentVec(II,1) = CS
-            CondensedNodeGroupTangentVec(II,2) = SI
+            CondensedNodesTangentVec(II,1) = CS
+            CondensedNodesTangentVec(II,2) = SI
 
          ENDIF
       ENDDO
 
-      END SUBROUTINE PrepCondensedNodeGroupTangentVector
+      END SUBROUTINE PrepCondensedNodesTangentVector
 C     ----------------------------------------------------------------
 
 

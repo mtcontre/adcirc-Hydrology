@@ -153,7 +153,7 @@ C*******************************************************************************
      &  IPERCONN, VIDispDXOH, VIDispDYOH, IFSFM, adcirc_norm2, CAliDisp,
      &  usingDynamicWaterLevelCorrection, Cs2, Ad, Bd, G,
      &  dynamicWaterLevelCorrection1, dynamicWaterLevelCorrection2,
-     &  CondensedNodeGroupTangentVec
+     &  CondensedNodesTangentVec
       USE MESH, ONLY : NE, NP, NM, DP, Areas, TotalArea, HTP1, HTP2,
      &     NNeigh, NeiTab, NeiTabEle, MJU, FDXE, FDYE,
      &     SWITCH_ELTAB_PERBC, SFacEle, SFMYEle, SFMXEle, TANPHI,
@@ -165,9 +165,9 @@ C*******************************************************************************
      &     NOLIBF,
      &     LoadAbsLayerSigma, absorblayer_sigma_eta,
      &     absorblayer_sigma_mnx, absorblayer_sigma_mny,
-     &     LoadCondensedNodeGroup, CondensedNodeGroup,
-     &     ListCondensedNodeGroup, NListCondensedNodeGroup,
-     &     NNodesListCondensedNodeGroup
+     &     LoadCondensedNodes, CondensedNodes,
+     &     ListCondensedNodes, NListCondensedNodes,
+     &     NNodesListCondensedNodes
       USE SUBDOMAIN, ONLY : subdomainOn, enforceBN, enforceUVOB, 
      &                       enforceUVCB
       USE SPONGELAYER
@@ -313,21 +313,21 @@ C..... DW
 C..... DW
 
 C..... SB
-         IF(CondensedNodeGroup(NM1,1).NE.0) THEN
-            CS = CondensedNodeGroupTangentVec(NM1,1)
-            SI = CondensedNodeGroupTangentVec(NM1,2)
+         IF(CondensedNodes(NM1,1).NE.0) THEN
+            CS = CondensedNodesTangentVec(NM1,1)
+            SI = CondensedNodesTangentVec(NM1,2)
             CSCS1 = CS*CS
             CSSI1 = CS*SI
             SISI1 = SI*SI
 
-            CS = CondensedNodeGroupTangentVec(NM2,1)
-            SI = CondensedNodeGroupTangentVec(NM2,2)
+            CS = CondensedNodesTangentVec(NM2,1)
+            SI = CondensedNodesTangentVec(NM2,2)
             CSCS2 = CS*CS
             CSSI2 = CS*SI
             SISI2 = SI*SI
 
-            CS = CondensedNodeGroupTangentVec(NM3,1)
-            SI = CondensedNodeGroupTangentVec(NM3,2)
+            CS = CondensedNodesTangentVec(NM3,1)
+            SI = CondensedNodesTangentVec(NM3,2)
             CSCS3 = CS*CS
             CSSI3 = CS*SI
             SISI3 = SI*SI
@@ -986,14 +986,14 @@ C     (1) FRONT SIDE TO BACK SIDE
          ENDDO 
       ENDIF
 
-C.... Summing up the values at condensed node group nodes
-      IF(LoadCondensedNodeGroup) THEN
-         DO K=1,NListCondensedNodeGroup
-            I = ListCondensedNodeGroup(K,1)
+C.... Summing up the values at condensed nodes
+      IF(LoadCondensedNodes) THEN
+         DO K=1,NListCondensedNodes
+            I = ListCondensedNodes(K,1)
             IF((NODECODE(I).NE.0)) THEN
                ! 1) Sum them up
-               DO L=2,NNodesListCondensedNodeGroup(K)
-                  J = ListCondensedNodeGroup(K,L)
+               DO L=2,NNodesListCondensedNodes(K)
+                  J = ListCondensedNodes(K,L)
                   AUV(1,I) = AUV(1,I) + AUV(1,J)
                   AUV(2,I) = AUV(2,I) + AUV(2,J)
                   AUV(3,I) = AUV(3,I) + AUV(3,J)
@@ -1002,8 +1002,8 @@ C.... Summing up the values at condensed node group nodes
                   MOM_LV_Y(I) = MOM_LV_Y(I) + MOM_LV_Y(J)
                ENDDO
                ! 2) Distribute them
-               DO L=2,NNodesListCondensedNodeGroup(K)
-                  J = ListCondensedNodeGroup(K,L)
+               DO L=2,NNodesListCondensedNodes(K)
+                  J = ListCondensedNodes(K,L)
                   AUV(1,J) = AUV(1,I)
                   AUV(2,J) = AUV(2,I)
                   AUV(3,J) = AUV(3,I)

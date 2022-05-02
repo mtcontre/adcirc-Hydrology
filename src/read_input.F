@@ -118,9 +118,9 @@ C-----------------------------------------------------------------------
 C ....DW
      &     LoadAbsLayerSigma, FoundAbsLayerSigma, 
 C ....SB
-     &     PrepCondensedNodeGroupTangentVector,
-     &     LoadCondensedNodeGroup, NListCondensedNodeGroup,
-     &     NNodesListCondensedNodeGroup, ListCondensedNodeGroup
+     &     PrepCondensedNodesTangentVector,
+     &     LoadCondensedNodes, NListCondensedNodes,
+     &     NNodesListCondensedNodes, ListCondensedNodes
       USE SPONGELAYER, ONLY: SpongeLayerRelatedPrep, FLAGSPONGEELEM
 C ... END DW
       USE Couple2BC3D, ONLY: BC3D_DT, DTIME1, DTIME2, ALLOC_BC3D_to_2D, 
@@ -2878,8 +2878,8 @@ C     jgf51.12.13: Adjust node table based on ics, nolifa, h0,
 C     slam0, sfea0. Check for sufficient precision. Compute neighbor table.
       call initializeMesh()
 
-CSB.. Parepare condensed node group data, which require coordinate info
-      call PrepCondensedNodeGroupTangentVector()
+CSB.. Parepare condensed node data, which require coordinate info
+      call PrepCondensedNodesTangentVector()
 C....
             
 C   For Sponge layer
@@ -3180,10 +3180,10 @@ C......DW, Dec 2019
 C......DW
       ENDIF
 C......SB, zero-out corif at 1d channel nodes, 3/7/2022
-      IF (LoadCondensedNodeGroup) THEN
-         DO K=1,NListCondensedNodeGroup
-            DO J=1,NNodesListCondensedNodeGroup(K)
-               I = ListCondensedNodeGroup(K,J)
+      IF (LoadCondensedNodes) THEN
+         DO K=1,NListCondensedNodes
+            DO J=1,NNodesListCondensedNodes(K)
+               I = ListCondensedNodes(K,J)
                CORIF(I) = 0.D0
             END DO
          END DO
