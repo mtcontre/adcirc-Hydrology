@@ -2275,7 +2275,7 @@ C...............FIND MAXIMUM DEPTH OVER THE CREST OF NEIGHBORS SB
                ISSUBMERGED64(I) = 0
                ISSUBMERGED64(LBArray_Pointer(NNBB2)) = 0
 
-            !    IF(WETNDHTOTMIN.LT.H0.AND..FALSE.) THEN
+                !    IF(WETNDHTOTMIN.LT.H0.AND..FALSE.) THEN
             !     FLUX = 0
             !     WRITE(*,*) 'WETNDHTOTMIN.LT.H0 AT ', NNBB1
                 !   IF((RBARWL1.GT.SUBMIN64).AND.(RBARWL2.GT.SUBMIN64)) THEN
@@ -2283,31 +2283,25 @@ C...............FIND MAXIMUM DEPTH OVER THE CREST OF NEIGHBORS SB
     !            ELSE IF((RBARWL1.GT.H0*2.D0).AND.(RBARWL2.GT.H0*2.D0)
             !    IF(RBARWL2.GE.H0.AND.(WETNDHTOTMIN.GE.H0)) THEN
             !    IF(RBARWLL.GE.H0.AND.(WETNDHTOTMIN.GE.H0)) THEN
-               IF(RBARWLL.GE.0.D0) THEN
 
             !    IF((RBARWL1.GT.0.D0).AND.(RBARWL2.GT.0.D0)) THEN
                 !            IF((RBARWL1.GT.SUBMIN64).AND.(RBARWL2.GT.SUBMIN64)
     !  &           .AND.(WETNDHTOTMIN.GT.H0)) THEN
 !               IF((RBARWL1.GT.SUBMIN64).AND.(RBARWL2.GT.SUBMIN64)
 !     &            .AND.(RBARWLNEIMIN.GT.SUBMIN64)) THEN
+               IF(RBARWLL.GE.0.D0) THEN
 C...............THIS IS THE MAJOR DIFFERENCE OF IBTYPE=64 FROM IBTYPE=24.
 C               WATER LEVEL ON BOTH SIDES OF BARRIER ABOVE BARRIER -> CASE 0
                   FLUX = 0.D0
                   ISSUBMERGED64(I) = 1
                   ISSUBMERGED64(LBArray_Pointer(NNBB2)) = 1
-                  IF(NNBB1.EQ.1581)
-     &              WRITE(*,'(A,F,F)') 'CASE 0: ', BARINCFSB(I), BARINCFSP(I)
                ELSEIF((RBARWL1.LT.0.D0).AND.(RBARWL2.LT.0.D0)) THEN
 C...............WATER LEVEL ON BOTH SIDES OF BARRIER BELOW BARRIER -> CASE 1
                   FLUX=0.D0
-                  IF(NNBB1.EQ.1581)
-     &              WRITE(*,'(A,F,F)') 'CASE 1: ', BARINCFSB(I), BARINCFSP(I)
                ELSEIF(ABS(RBARWL1-RBARWL2).LT.0.01D0) THEN
 C...............WATER LEVEL EQUAL ON BOTH SIDES OF BARRIER
 C................TO WITHIN TOLERANCE BARMIN -> CASE 2
                   FLUX=0.D0
-                  IF(NNBB1.EQ.1581)
-     &              WRITE(*,'(A,F,F)') 'CASE 2: ', BARINCFSB(I), BARINCFSP(I)
                ELSEIF((RBARWL1.GT.RBARWL2).AND.(RBARWL1.GT.BARMIN64)) THEN
 C...............WATER LEVEL GREATER ON THIS SIDE OF THE BARRIER AND IS SUCH
 C................THAT OVERTOPPING IS OCCURING
@@ -2323,26 +2317,17 @@ C................THE BARRIER. shintaro v46.28.sb05.05 11/01/2006
 C..................OUTWARD SUBCRITICAL FLOW -> CASE 3
                      IF(NODECODE(NNBB1).EQ.0.OR.NNBB1WN.EQ.0) THEN
                         FLUX=0.0D0
-                        IF(NNBB1.EQ.1581)
-     &              WRITE(*,'(A,F,F)') 'CASE 3a: ', BARINCFSB(I), BARINCFSP(I)
                      ELSE
                         FLUX=-RampIntFlux*RBARWL2*BARINCFSB(I)*
      &                     (2.D0*G*(RBARWL1-RBARWL2))**0.5D0
-                     IF(NNBB1.EQ.1581)
-     &              WRITE(*,'(A,F,F)') 'CASE 3b: ', BARINCFSB(I), BARINCFSP(I)
-                     ENDIF
+                    ENDIF
                   ELSE
 C..................OUTWARD SUPERCRITICAL FLOW -> CASE 4
                      IF(NODECODE(NNBB1).EQ.0.OR.NNBB1WN.EQ.0) THEN
                         FLUX=0.0D0
-                        IF(NNBB1.EQ.1581)
-     &              WRITE(*,'(A,F,F,I,I)') 'CASE 4a: ', BARINCFSB(I), BARINCFSP(I),
-     &                NODECODE(NNBB1), NNBB1WN
                      ELSE
                         FLUX=-RampIntFlux*BARINCFSP(I)*RBARWL1F*
      &                    (RBARWL1F*G)**0.5D0
-                        IF(NNBB1.EQ.1581)
-     &              WRITE(*,'(A,F,F)') 'CASE 4b: ', BARINCFSB(I), BARINCFSP(I)
                      ENDIF
                   ENDIF
                ELSEIF((RBARWL2.GT.RBARWL1).AND.(RBARWL2.GT.BARMIN64)) THEN
@@ -2366,27 +2351,17 @@ C................THE BARRIER. shintaro v46.28.sb05.05 11/01/2006
 C..................INWARD SUBCRITICAL FLOW -> CASE 5
                      IF(NODECODE(NNBB2).EQ.0.OR.NNBB2WN.EQ.0) THEN
                         FLUX=0.0D0
-                        IF(NNBB1.EQ.1581)
-     &              WRITE(*,'(A,F,F)') 'CASE 5a: ', BARINCFSB(I), BARINCFSP(I)
                      ELSE
                         FLUX=RampIntFlux*RBARWL1*BARINCFSB(I)*
      &                     (2.0D0*G*(RBARWL2-RBARWL1))**0.5D0
-                        ! NIBNODECODE(NNBB1)=1
-                        IF(NNBB1.EQ.1581)
-     &              WRITE(*,'(A,F,F)') 'CASE 5b: ', BARINCFSB(I), BARINCFSP(I)
                      ENDIF
                   ELSE
 C..................INWARD SUPERCRITICAL FLOW -> CASE 6
                      IF(NODECODE(NNBB2).EQ.0.OR.NNBB2WN.EQ.0) THEN
                         FLUX=0.0D0
-                        IF(NNBB1.EQ.1581)
-     &              WRITE(*,'(A,F,F)') 'CASE 6a: ', BARINCFSB(I), BARINCFSP(I)
                      ELSE
                         FLUX=RampIntFlux*BARINCFSP(I)*RBARWL2F*
      &                     (RBARWL2F*G)**0.5D0
-                        ! NIBNODECODE(NNBB1)=1
-                        IF(NNBB1.EQ.1581)
-     &              WRITE(*,'(A,F,F)') 'CASE 6b: ', BARINCFSB(I), BARINCFSP(I)
                      ENDIF
                   ENDIF
                ELSE
