@@ -153,7 +153,7 @@ C*******************************************************************************
      &  IPERCONN, VIDispDXOH, VIDispDYOH, IFSFM, adcirc_norm2, CAliDisp,
      &  usingDynamicWaterLevelCorrection, Cs2, Ad, Bd, G,
      &  dynamicWaterLevelCorrection1, dynamicWaterLevelCorrection2,
-     &  SmoothingNodePairsTangentVec
+     &  CondensedNodeGroupTangentVec
       USE MESH, ONLY : NE, NP, NM, DP, Areas, TotalArea, HTP1, HTP2,
      &     NNeigh, NeiTab, NeiTabEle, MJU, FDXE, FDYE,
      &     SWITCH_ELTAB_PERBC, SFacEle, SFMYEle, SFMXEle, TANPHI,
@@ -165,9 +165,9 @@ C*******************************************************************************
      &     NOLIBF,
      &     LoadAbsLayerSigma, absorblayer_sigma_eta,
      &     absorblayer_sigma_mnx, absorblayer_sigma_mny,
-     &     LoadSmoothingNodePairs, SmoothingNodePairs,
-     &     ListSmoothingNodePairs, NListSmoothingNodePairs,
-     &     NNodesListSmoothingNodePairs
+     &     LoadCondensedNodeGroup, CondensedNodeGroup,
+     &     ListCondensedNodeGroup, NListCondensedNodeGroup,
+     &     NNodesListCondensedNodeGroup
       USE SUBDOMAIN, ONLY : subdomainOn, enforceBN, enforceUVOB, 
      &                       enforceUVCB
       USE SPONGELAYER
@@ -224,7 +224,6 @@ C..... DW
 C......DW
 C..... SB
       INTEGER:: NNBB1, NNBB2, IS1, IS2
-      INTEGER:: WFP1, WFP2 ! NO WET FLOODPLAIN ATTACHED TO SMOOTHING PAIR NODE
       REAL(SZ):: fBUF, fBUF1, fBUF2, X1, Y1, X2, Y2, XL, SI, CS
       REAL(SZ):: COEFIB64
       REAL(SZ):: CSCS1, CSSI1, SISI1 ! cos*cos, cos*sin (=sin*cos), sin*sin
@@ -314,21 +313,21 @@ C..... DW
 C..... DW
 
 C..... SB
-         IF(SmoothingNodePairs(NM1,1).NE.0) THEN
-            CS = SmoothingNodePairsTangentVec(NM1,1)
-            SI = SmoothingNodePairsTangentVec(NM1,2)
+         IF(CondensedNodeGroup(NM1,1).NE.0) THEN
+            CS = CondensedNodeGroupTangentVec(NM1,1)
+            SI = CondensedNodeGroupTangentVec(NM1,2)
             CSCS1 = CS*CS
             CSSI1 = CS*SI
             SISI1 = SI*SI
 
-            CS = SmoothingNodePairsTangentVec(NM2,1)
-            SI = SmoothingNodePairsTangentVec(NM2,2)
+            CS = CondensedNodeGroupTangentVec(NM2,1)
+            SI = CondensedNodeGroupTangentVec(NM2,2)
             CSCS2 = CS*CS
             CSSI2 = CS*SI
             SISI2 = SI*SI
 
-            CS = SmoothingNodePairsTangentVec(NM3,1)
-            SI = SmoothingNodePairsTangentVec(NM3,2)
+            CS = CondensedNodeGroupTangentVec(NM3,1)
+            SI = CondensedNodeGroupTangentVec(NM3,2)
             CSCS3 = CS*CS
             CSSI3 = CS*SI
             SISI3 = SI*SI
@@ -948,36 +947,6 @@ C...
 C...  SOLVE FOR VELOCITY AT NEW LEVEL  (s+1)
 C...
 
-! CSB.. Apply essential no normal flow bc on the smoothing node pairs
-!       IF(LoadSmoothingNodePairs) THEN
-!          DO IS1=1,NP
-!             IF(SmoothingNodePairs(IS1).gt.0) THEN
-!                IS2 = SmoothingNodePairs(IS1)
-!                X1 = X(IS1)
-!                Y1 = Y(IS1)
-!                X2 = X(IS2)
-!                Y2 = Y(IS2)
-!                XL = SQRT((X1-X2)**2+(Y1-Y2)**2)
-!                CS = (X1-X2)/XL
-!                SI = SFMX(IS1)*(Y1-Y2)/XL
-
-!                ! At Node IS1
-!                fBUF = SI*MOM_LV_X(IS1) - CS*MOM_LV_Y(IS1)
-!                MOM_LV_X(IS1) =  SI * fBUF
-!                MOM_LV_Y(IS1) = -CS * fBUF
-!                AUV(3,IS1) = 0.D0
-!                AUV(4,IS1) = 0.D0
-
-!                ! At Node IS2
-!                fBUF = SI*MOM_LV_X(IS2) - CS*MOM_LV_Y(IS2)
-!                MOM_LV_X(IS2) =  SI * fBUF
-!                MOM_LV_Y(IS2) = -CS * fBUF
-!                AUV(3,IS2) = 0.D0
-!                AUV(4,IS2) = 0.D0
-!             ENDIF
-!          ENDDO
-!       ENDIF
-
 CSB.. STITCH TOGETHER FULLY SUBMERGED IBTYPE=64 WEIR NODE PAIRS
 C     (1) FRONT SIDE TO BACK SIDE
       IF(NFLUXIB.EQ.1) THEN
@@ -1017,14 +986,14 @@ C     (1) FRONT SIDE TO BACK SIDE
          ENDDO 
       ENDIF
 
-C.... Smoothing the values at specified node pairs by merging equations
-      IF(LoadSmoothingNodePairs) THEN
-         DO K=1,NListSmoothingNodePairs
-            I = ListSmoothingNodePairs(K,1)
+C.... Summing up the values at condensed node group nodes
+      IF(LoadCondensedNodeGroup) THEN
+         DO K=1,NListCondensedNodeGroup
+            I = ListCondensedNodeGroup(K,1)
             IF((NODECODE(I).NE.0)) THEN
                ! 1) Sum them up
-               DO L=2,NNodesListSmoothingNodePairs(K)
-                  J = ListSmoothingNodePairs(K,L)
+               DO L=2,NNodesListCondensedNodeGroup(K)
+                  J = ListCondensedNodeGroup(K,L)
                   AUV(1,I) = AUV(1,I) + AUV(1,J)
                   AUV(2,I) = AUV(2,I) + AUV(2,J)
                   AUV(3,I) = AUV(3,I) + AUV(3,J)
@@ -1033,8 +1002,8 @@ C.... Smoothing the values at specified node pairs by merging equations
                   MOM_LV_Y(I) = MOM_LV_Y(I) + MOM_LV_Y(J)
                ENDDO
                ! 2) Distribute them
-               DO L=2,NNodesListSmoothingNodePairs(K)
-                  J = ListSmoothingNodePairs(K,L)
+               DO L=2,NNodesListCondensedNodeGroup(K)
+                  J = ListCondensedNodeGroup(K,L)
                   AUV(1,J) = AUV(1,I)
                   AUV(2,J) = AUV(2,I)
                   AUV(3,J) = AUV(3,I)
@@ -1134,118 +1103,6 @@ C...
      &                                            +VV2(NM3)*ZNGIF3(I))
             ENDIF
          ENDDO
-      ENDIF
-
-! C.... Smoothing the values at specified node pairs by taking average
-!       IF(LoadSmoothingNodePairs) THEN
-!          DO I=1,NP
-!             IF(SmoothingNodePairs(I).gt.0) THEN
-!                J = SmoothingNodePairs(I)
-!                IF((NODECODE(I)).NE.0.AND.(NODECODE(J).NE.0)) THEN
-!                   fBuf = ( UU2(I) + UU2(J) ) * 0.5D0
-!                   UU2(I) = fBuf
-!                   UU2(J) = fBuf
-!                   fBuf = ( VV2(I) + VV2(J) ) * 0.5D0
-!                   VV2(I) = fBuf
-!                   VV2(J) = fBuf
-!                ENDIF
-!             ENDIF
-!          ENDDO
-!       ENDIF
-C.... Removing the normal component of velocity vectors at specified node pairs
-C.... only when the node is attached to a boundary and both sides are submerged.
-C.... Note that the ISSUBMERGED64 value is zero if the node is not a part of
-C.... the IBTYPE=64 internal barrier boundary. The ISSUBMERGED64 value is non zero
-C.... only when the node belongs to a IBTYPE=64 internal barrier boundary and
-C.... the water elevation at the node is higher than the weir height on both sides
-C.... of the weir.
-   !    write(6,'(A,I4,I4,I4,F6.2,I8,I4)') 'ibarray_pointer(1),issubmerged64(.)=',
-   !   &  lbarray_pointer(1),issubmerged64(lbarray_pointer(1)),
-   !   &  nodecode(lbarray_pointer(1)), eta2(1),
-   !   &  IBCONN(lbarray_pointer(1)),nodecode(IBCONN(lbarray_pointer(1)))
-   !    write(6,'(A,I4,I4,I4,F6.2,I8,I4)') 'ibarray_pointer(2),issubmerged64(.)=',
-   !   &  lbarray_pointer(2),issubmerged64(lbarray_pointer(2)),
-   !   &  nodecode(lbarray_pointer(2)), eta2(2),
-   !   &  IBCONN(lbarray_pointer(2)),nodecode(IBCONN(lbarray_pointer(2)))
-      IF(LoadSmoothingNodePairs) THEN
-!          DO K=1,NListSmoothingNodePairs
-!             IS1 = ListSmoothingNodePairs(K,1)
-!             IF((NODECODE(IS1).NE.0).AND.
-!      &         (NNodesListSmoothingNodePairs(K).EQ.2)) THEN
-!                IS2 = ListSmoothingNodePairs(K,2)
-!                IF((LBArray_Pointer(IS1).GT.0).AND.(LBArray_Pointer(IS2).GT.0)) THEN
-! !                  IF((ISSUBMERGED64(LBArray_Pointer(IS1)).EQ.0).AND.
-! !     &               (ISSUBMERGED64(LBArray_Pointer(IS2)).EQ.0)) THEN
-!                   IF((NODECODE(IBCONN(LBArray_Pointer(IS1))).EQ.0).AND.
-!      &               (NODECODE(IBCONN(LBArray_Pointer(IS2))).EQ.0)) THEN
-!                      X1 = X(IS1)
-!                      Y1 = Y(IS1)
-!                      X2 = X(IS2)
-!                      Y2 = Y(IS2)
-!                      XL = SQRT((X1-X2)**2+(Y1-Y2)**2)
-!                      CS = (X1-X2)/XL
-!                      SI = SFMX(IS1)*(Y1-Y2)/XL
-
-!                      ! At Node IS1
-!                      fBUF = SI*UU2(IS1) - CS*VV2(IS1)
-!                      UU2(IS1) =  SI * fBUF
-!                      VV2(IS1) = -CS * fBUF
-
-!                      ! At Node IS2
-!                      fBUF = SI*UU2(IS2) - CS*VV2(IS2)
-!                      UU2(IS2) =  SI * fBUF
-!                      VV2(IS2) = -CS * fBUF
-!                   ENDIF
-!                ENDIF
-!             ENDIF
-!          ENDDO
-!          DO K=1,NListSmoothingNodePairs
-!          IF(NNodesListSmoothingNodePairs(K).EQ.2) THEN
-!          IS1 = ListSmoothingNodePairs(K,1)
-!          IS2 = ListSmoothingNodePairs(K,2)
-!          IF((NODECODE(IS1).NE.0).AND.(NODECODE(IS2).NE.0)) THEN
-!             IF(LBArray_Pointer(IS1).LE.0) THEN ! IF THERE IS NO FLOODPLAIN NODE
-!                WFP1 = 0
-!             ELSE IF((NODECODE(IBCONN(LBArray_Pointer(IS1))).EQ.0).OR. ! IF FLOODPLAIN NODE IS DRY
-!      &              (ISSUBMERGED64(LBArray_Pointer(IS1)).EQ.0)) THEN  ! AND THE BANK iS SUBMERGED
-!                WFP1 = 0
-!             ELSE
-!                WFP1 = 1
-!             ENDIF
-!             IF(LBArray_Pointer(IS2).LE.0) THEN ! IF THERE IS NO FLOODPLAIN NODE
-!                WFP2 = 0
-!             ELSE IF((NODECODE(IBCONN(LBArray_Pointer(IS2))).EQ.0).OR. ! IF FLOODPLAIN NODE IS DRY
-!      &              (ISSUBMERGED64(LBArray_Pointer(IS2)).EQ.0)) THEN  ! AND THE BANK iS SUBMERGED
-!                WFP2 = 0
-!             ELSE
-!                WFP2 = 1
-!             ENDIF
-!             IF((WFP1.EQ.0).AND.(WFP2.EQ.0)) THEN  ! IF BOTH FLOODPLAIN COUNTERPART NODES OF PAIRED NODES ARE NOT WET
-! !                  IF((ISSUBMERGED64(LBArray_Pointer(IS1)).EQ.0).AND.
-! !     &               (ISSUBMERGED64(LBArray_Pointer(IS2)).EQ.0)) THEN
-! !                  IF((NODECODE(IBCONN(LBArray_Pointer(IS1))).EQ.0).AND.
-! !     &               (NODECODE(IBCONN(LBArray_Pointer(IS2))).EQ.0)) THEN
-!                X1 = X(IS1)
-!                Y1 = Y(IS1)
-!                X2 = X(IS2)
-!                Y2 = Y(IS2)
-!                XL = SQRT((X1-X2)**2+(Y1-Y2)**2)
-!                CS = (X1-X2)/XL
-!                SI = SFMX(IS1)*(Y1-Y2)/XL
-
-!                ! At Node IS1
-!                fBUF = SI*UU2(IS1) - CS*VV2(IS1)
-!                UU2(IS1) =  SI * fBUF
-!                VV2(IS1) = -CS * fBUF
-
-!                ! At Node IS2
-!                fBUF = SI*UU2(IS2) - CS*VV2(IS2)
-!                UU2(IS2) =  SI * fBUF
-!                VV2(IS2) = -CS * fBUF
-!             ENDIF
-!          ENDIF
-!          ENDIF
-!          ENDDO
       ENDIF
 
 C...  Compute fluxes

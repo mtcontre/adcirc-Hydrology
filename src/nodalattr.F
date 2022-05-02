@@ -103,18 +103,16 @@ Corbitt 120321: Allow Advection to be Turned on Locally instead of Globally
       INTEGER              :: AdvectionStateNoOfVals
       REAL(SZ)             :: AdvectionStateDefVal
       REAL(SZ),ALLOCATABLE :: AdvectionState(:)
-C     Specify node pairs for smoothing by averaging. Inteded to be used
-C     combined with IBTYPE=64 weir boundaries for very narrow channels
-C     to avoid CFL condition violation
-      LOGICAL              :: LoadSmoothingNodePairs
-      LOGICAL              :: FoundSmoothingNodePairs
-      CHARACTER(LEN=80)    :: SmoothingNodePairsUnits
-      INTEGER              :: SmoothingNodePairsNoOfVals
-      INTEGER              :: SmoothingNodePairsDefVal(4)
-      INTEGER,ALLOCATABLE  :: SmoothingNodePairs(:,:)
-      INTEGER,ALLOCATABLE  :: ListSmoothingNodePairs(:,:)
-      INTEGER              :: NListSmoothingNodePairs
-      INTEGER,ALLOCATABLE  :: NNodesListSmoothingNodePairs(:)
+Csb   Specify node groups for 1D condensation.
+      LOGICAL              :: LoadCondensedNodeGroup
+      LOGICAL              :: FoundCondensedNodeGroup
+      CHARACTER(LEN=80)    :: CondensedNodeGroupUnits
+      INTEGER              :: CondensedNodeGroupNoOfVals
+      INTEGER              :: CondensedNodeGroupDefVal(4)
+      INTEGER,ALLOCATABLE  :: CondensedNodeGroup(:,:)
+      INTEGER,ALLOCATABLE  :: ListCondensedNodeGroup(:,:)
+      INTEGER              :: NListCondensedNodeGroup
+      INTEGER,ALLOCATABLE  :: NNodesListCondensedNodeGroup(:)
 C
 C     The following flags are .true. if the corresponding data are
 C     required for the run, according to the unit 15 control file
@@ -374,10 +372,10 @@ Corbitt 120321:
       AdvectionStateNoOfVals = 1
       AdvectionStateDefVal   = 0.D0
 C
-      LoadSmoothingNodePairs     = .False.
-      FoundSmoothingNodePairs    = .FALSE.
-      SmoothingNodePairsNoOfVals = 3
-      SmoothingNodePairsDefVal   = 0
+      LoadCondensedNodeGroup     = .False.
+      FoundCondensedNodeGroup    = .FALSE.
+      CondensedNodeGroupNoOfVals = 3
+      CondensedNodeGroupDefVal   = 0
 C
       LoadTau0           = .False.
       LoadStartDry       = .False.
@@ -628,8 +626,8 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
 Corbitt 120321: Allow advection to be turned on locally instead of globally
          CASE("advection_state")
             FoundAdvectionState = .TRUE.
-         CASE("smoothing_node_pairs")
-            FoundSmoothingNodePairs = .TRUE.
+         CASE("condensed_node_group")
+            FoundCondensedNodeGroup = .TRUE.
          CASE("elemental_slope_limiter")
             FoundEleSlopeLim = .TRUE.
          CASE("initial_river_elevation")            
@@ -788,9 +786,9 @@ Corbitt 120321: Allow Advection to be handled locally instead of globally.
             IF (LoadAdvectionState) THEN
                advectionState = na(i)%xdmfArray
             ENDIF
-         CASE("smoothing_node_pairs")
-            IF (LoadSmoothingNodePairs) THEN
-               SmoothingNodePairs = na(i)%xdmfMatrix
+         CASE("condensed_node_group")
+            IF (LoadCondensedNodeGroup) THEN
+               CondensedNodeGroup = na(i)%xdmfMatrix
             ENDIF
          CASE("elemental_slope_limiter")
             IF( LoadEleSlopeLim ) THEN
@@ -862,7 +860,7 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
      &   ((LoadSwanWaveRefrac).and.(.not.FoundSwanWaveRefrac)).or.
 Corbitt 120321: Allow advection to be turned on locally instead of globally
      &   ((LoadAdvectionState).and.(.not.FoundAdvectionState)).or.
-     &   ((LoadSmoothingNodePairs).and.(.not.FoundSmoothingNodePairs)).or.
+     &   ((LoadCondensedNodeGroup).and.(.not.FoundCondensedNodeGroup)).or.
      &   ((LoadEleSlopeLim).and.(.not.FoundEleSlopeLim)).or.
      &   ((LoadRiver_et_WSE).and.(.not.FoundRiver_et_WSE)).or.     
      &   ((LoadIT_Fric).and.(.not.FoundIT_Fric)).or. 
@@ -906,7 +904,7 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
       ALLOCATE(SwanWaveRefrac(NumOfNodes))
 Corbitt 120321: Allow advection to be turned on locally instead of globally
       ALLOCATE(AdvectionState(NumOfNodes))
-      ALLOCATE(SmoothingNodePairs(NumOfNodes,SmoothingNodePairsNoOfVals))
+      ALLOCATE(CondensedNodeGroup(NumOfNodes,CondensedNodeGroupNoOfVals))
       ALLOCATE(River_et_WSE(NumOfNodes))  ! tcm 20140502 v51.27
       ALLOCATE(OverlandReductionFactor(NumOfNodes))
       ALLOCATE(elemental_slope_limiter_grad_max(NumOfNodes))
@@ -1028,8 +1026,8 @@ Casey 100210: Allow SWAN to handle wave refraction as a nodal attribute.
 Corbitt 120321: Allow advection to be turned on locally instead of globally
          CASE("advection_state")
             LoadAdvectionState = .True.
-         CASE("smoothing_node_pairs")
-            LoadSmoothingNodePairs = .True.
+         CASE("condensed_node_group")
+            LoadCondensedNodeGroup = .True.
          CASE("elemental_slope_limiter")
             LoadEleSlopeLim = .TRUE.
          CASE("initial_river_elevation")  ! tcm 20140502 v51.27
@@ -1210,12 +1208,12 @@ Corbitt 120321: Allow advection to be turned on locally instead of globally
             READ(13,'(A80)') AdvectionStateUnits
             READ(13,*) AdvectionStateNoOfVals
             READ(13,*) AdvectionStateDefVal
-         CASE("smoothing_node_pairs")
-            FoundSmoothingNodePairs = .TRUE.
-            READ(13,'(A80)') SmoothingNodePairsUnits
-            READ(13,*) SmoothingNodePairsNoOfVals
-            READ(13,*) (SmoothingNodePairsDefVal(j),
-     &                  j=1,SmoothingNodePairsNoOfVals)
+         CASE("condensed_node_group")
+            FoundCondensedNodeGroup = .TRUE.
+            READ(13,'(A80)') CondensedNodeGroupUnits
+            READ(13,*) CondensedNodeGroupNoOfVals
+            READ(13,*) (CondensedNodeGroupDefVal(j),
+     &                  j=1,CondensedNodeGroupNoOfVals)
          CASE("elemental_slope_limiter")
             FoundEleSlopeLim = .TRUE.
             READ(13,'(A80)') EleSlopeLimUnits
@@ -1388,13 +1386,13 @@ Corbitt 120321: Allow Advection to be handled locally instead of globally.
             ELSE
                SkipDataSet = .TRUE.
             ENDIF
-         CASE("smoothing_node_pairs")
-            IF (LoadSmoothingNodePairs) THEN
-               CALL LoadAttrMatNodeNo(SmoothingNodePairs,
-     &              SmoothingNodePairsNoOfVals,
-     &              SmoothingNodePairsDefVal,
+         CASE("condensed_node_group")
+            IF (LoadCondensedNodeGroup) THEN
+               CALL LoadAttrMatNodeNo(CondensedNodeGroup,
+     &              CondensedNodeGroupNoOfVals,
+     &              CondensedNodeGroupDefVal,
      &              NumNodesNotDefault, NScreen, MyProc, NAbOut)
-               CALL PrepSmoothingNodePairs()
+               CALL PrepCondensedNodeGroup()
             ELSE
                SkipDataSet = .TRUE.
             ENDIF
@@ -2841,11 +2839,12 @@ C     ----------------------------------------------------------------
 C     ----------------------------------------------------------------
 
 C     ----------------------------------------------------------------
-C        S U B R O U T I N E   P R E P  S M O O T H I N G  N O D E  P A I R S
+C        S U B R O U T I N E   P R E P  C O N D E N S E D
+C                              N O D E  G R O U P
 C     ----------------------------------------------------------------
-C     Parepare list of smoothing node pairs
+C     Parepare list of condensed node groups
 C     ----------------------------------------------------------------
-      SUBROUTINE PrepSmoothingNodePairs()
+      SUBROUTINE PrepCondensedNodeGroup()
 C     ----------------------------------------------------------------
       USE SIZES, ONLY : SZ
       USE MESH, ONLY : NP
@@ -2853,58 +2852,58 @@ C     ----------------------------------------------------------------
       INTEGER I,J,K,II
       INTEGER JMAX
 
-      NListSmoothingNodePairs = 0
+      NListCondensedNodeGroup = 0
       JMAX = 0
       DO I=1,NP
-         IF(SmoothingNodePairs(I,1).NE.0) THEN
-            NListSmoothingNodePairs = NListSmoothingNodePairs + 1
-            DO J=1,SmoothingNodePairsNoOfVals
-               IF(SmoothingNodePairs(I,J).EQ.0) EXIT
+         IF(CondensedNodeGroup(I,1).NE.0) THEN
+            NListCondensedNodeGroup = NListCondensedNodeGroup + 1
+            DO J=1,CondensedNodeGroupNoOfVals
+               IF(CondensedNodeGroup(I,J).EQ.0) EXIT
                IF(JMAX.LT.J) JMAX = J
             ENDDO
          ENDIF
       ENDDO
 
-      ALLOCATE(ListSmoothingNodePairs(NListSmoothingNodePairs,JMAX+1))
-      ALLOCATE(NNodesListSmoothingNodePairs(NListSmoothingNodePairs))
+      ALLOCATE(ListCondensedNodeGroup(NListCondensedNodeGroup,JMAX+1))
+      ALLOCATE(NNodesListCondensedNodeGroup(NListCondensedNodeGroup))
 
       K = 0
       DO I=1,NP
-         IF(SmoothingNodePairs(I,1).GT.0) THEN
+         IF(CondensedNodeGroup(I,1).GT.0) THEN
             K = K + 1
-            ListSmoothingNodePairs(K,1) = I
-            DO J=1,SmoothingNodePairsNoOfVals
-               IF(SmoothingNodePairs(I,J).EQ.0) EXIT
-               II = SmoothingNodePairs(I,J)
-               ListSmoothingNodePairs(K,J+1) = II
-               NNodesListSmoothingNodePairs(K) = J+1
-               SmoothingNodePairs(II,1) = -1 ! Flag to tell that node II is one of smoothing node pair nodes
+            ListCondensedNodeGroup(K,1) = I
+            DO J=1,CondensedNodeGroupNoOfVals
+               IF(CondensedNodeGroup(I,J).EQ.0) EXIT
+               II = CondensedNodeGroup(I,J)
+               ListCondensedNodeGroup(K,J+1) = II
+               NNodesListCondensedNodeGroup(K) = J+1
+               CondensedNodeGroup(II,1) = -1 ! Flag to tell that node II is one of condensed nodes
             ENDDO
          ENDIF
       ENDDO
 
-      END SUBROUTINE PrepSmoothingNodePairs
+      END SUBROUTINE PrepCondensedNodeGroup
 C     ----------------------------------------------------------------
 
 C     ----------------------------------------------------------------
-C        S U B R O U T I N E   P R E P  S M O O T H I N G  N O D E  P A I R S
-C                              T A N G E N T  V E C T O R
+C        S U B R O U T I N E   P R E P  C O N D E S E D  G R O U P
+C                              N O D E  T A N G E N T  V E C T O R
 C     ----------------------------------------------------------------
-C     Parepare tangent vectors at smoothing node pairs
+C     Parepare tangent vectors at condensed node groups
 C     ----------------------------------------------------------------
-      SUBROUTINE PrepSmoothingNodePairsTangentVector()
+      SUBROUTINE PrepCondensedNodeGroupTangentVector()
 C     ----------------------------------------------------------------
       USE SIZES, ONLY : SZ
-      USE GLOBAL, ONLY : SmoothingNodePairsTangentVec
+      USE GLOBAL, ONLY : CondensedNodeGroupTangentVec
       USE MESH, ONLY : NP, X, Y, SFMX
       IMPLICIT NONE
       REAL(SZ) X1, X2, Y1, Y2, XL, CS, SI
       INTEGER I,K,II
 
-      DO K=1,NListSmoothingNodePairs
-         IF(NNodesListSmoothingNodePairs(K).EQ.2) THEN ! Assign tangent vec only if two nodes are assigned.
-            I  = ListSmoothingNodePairs(K,1)
-            II = ListSmoothingNodePairs(K,2)
+      DO K=1,NListCondensedNodeGroup
+         IF(NNodesListCondensedNodeGroup(K).EQ.2) THEN ! Assign tangent vec only if two nodes are assigned.
+            I  = ListCondensedNodeGroup(K,1)
+            II = ListCondensedNodeGroup(K,2)
             X1 = X(I)
             Y1 = Y(I)
             X2 = X(II)
@@ -2913,18 +2912,18 @@ C     ----------------------------------------------------------------
 
             CS = SFMX(I)*(Y1-Y2)/XL
             SI = (X2-X1)/XL
-            SmoothingNodePairsTangentVec(I,1) = CS
-            SmoothingNodePairsTangentVec(I,2) = SI
+            CondensedNodeGroupTangentVec(I,1) = CS
+            CondensedNodeGroupTangentVec(I,2) = SI
 
             CS = SFMX(II)*(Y1-Y2)/XL
             ! SI = (X2-X1)/XL  ! SI is the same
-            SmoothingNodePairsTangentVec(II,1) = CS
-            SmoothingNodePairsTangentVec(II,2) = SI
+            CondensedNodeGroupTangentVec(II,1) = CS
+            CondensedNodeGroupTangentVec(II,2) = SI
 
          ENDIF
       ENDDO
 
-      END SUBROUTINE PrepSmoothingNodePairsTangentVector
+      END SUBROUTINE PrepCondensedNodeGroupTangentVector
 C     ----------------------------------------------------------------
 
 

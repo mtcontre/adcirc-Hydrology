@@ -118,9 +118,9 @@ C-----------------------------------------------------------------------
 C ....DW
      &     LoadAbsLayerSigma, FoundAbsLayerSigma, 
 C ....SB
-     &     PrepSmoothingNodePairsTangentVector,
-     &     LoadSmoothingNodePairs, NListSmoothingNodePairs,
-     &     NNodesListSmoothingNodePairs, ListSmoothingNodePairs
+     &     PrepCondensedNodeGroupTangentVector,
+     &     LoadCondensedNodeGroup, NListCondensedNodeGroup,
+     &     NNodesListCondensedNodeGroup, ListCondensedNodeGroup
       USE SPONGELAYER, ONLY: SpongeLayerRelatedPrep, FLAGSPONGEELEM
 C ... END DW
       USE Couple2BC3D, ONLY: BC3D_DT, DTIME1, DTIME2, ALLOC_BC3D_to_2D, 
@@ -1443,12 +1443,6 @@ C     For sponge layer
         CALL SpongeLayerRelatedPrep( ) 
       END IF
 C................END DW.......
-
-! Csb<< SmoothingNodePair related prep
-!       IF ( LoadSmoothingNodePairs .AND. FoundSmoothingNodePairs ) THEN
-!          CALL SmoothingNodePairRelatedPrep( )
-!       END IF
-! Csb>>
 
 C...
 C...  READ AND PROCESS NCOR - SPATIALLY VARYING CORIOLIS PARAMETER
@@ -2884,8 +2878,8 @@ C     jgf51.12.13: Adjust node table based on ics, nolifa, h0,
 C     slam0, sfea0. Check for sufficient precision. Compute neighbor table.
       call initializeMesh()
 
-CSB.. Parepare smoothing node pairs data, which require coorinate info
-      call PrepSmoothingNodePairsTangentVector()
+CSB.. Parepare condensed node group data, which require coordinate info
+      call PrepCondensedNodeGroupTangentVector()
 C....
             
 C   For Sponge layer
@@ -3186,10 +3180,10 @@ C......DW, Dec 2019
 C......DW
       ENDIF
 C......SB, zero-out corif at 1d channel nodes, 3/7/2022
-      IF (LoadSmoothingNodePairs) THEN
-         DO K=1,NListSmoothingNodePairs
-            DO J=1,NNodesListSmoothingNodePairs(K)
-               I = ListSmoothingNodePairs(K,J)
+      IF (LoadCondensedNodeGroup) THEN
+         DO K=1,NListCondensedNodeGroup
+            DO J=1,NNodesListCondensedNodeGroup(K)
+               I = ListCondensedNodeGroup(K,J)
                CORIF(I) = 0.D0
             END DO
          END DO
@@ -6283,25 +6277,4 @@ C-----------------------------------------------------------------------
 C-----------------------------------------------------------------------
       end subroutine logNamelistReadStatus
 C-----------------------------------------------------------------------
-
-! C-----------------------------------------------------------------------
-! C                          S U B R O U T I N E
-! C     S M O O T H I N G   N O D E   P A I R   R E L A T E D   P R E P
-! C-----------------------------------------------------------------------
-!       SUBROUTINE SmoothingNodePairRelatedPrep
-!       USE GLOBAL,ONLY: SmoothingNodePairsTangentVec
-!       USE NodalAttributes,ONLY: SmoothingNodePairs
-!       USE Mesh,ONLY: 
-!       IMPLICIT NONE
-!       INTEGER :: I, J
-!       DO I = 1,NP
-!          IF (SmoothingNodePairs(I).NE.0) THEN
-!             J = SmoothingNodePairs(I)
-!          ELSE
-!             SmoothingNodePairsTangentVec(I,:) = 1.D0
-!          ENDIF
-!       ENDDO
-! C-----------------------------------------------------------------------
-!       END SUBROUTIN
-! C-----------------------------------------------------------------------
 

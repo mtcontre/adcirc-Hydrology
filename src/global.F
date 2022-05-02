@@ -827,9 +827,9 @@ C     v49.48.01 tcm 20110126 Variables related to kdtree searches
       real(sz), allocatable, target :: dynamicWaterLevelCorrectionSta(:)
 
 C---- Unit vectors in the direction normal to the vector from one node of 
-C     smoothing node pairs to the other (= channel flow direction),
+C     condensed node group to the other (= channel flow direction),
 C     later used in momentum.F
-      real(sz), allocatable :: SmoothingNodePairsTangentVec(:,:)
+      real(sz), allocatable :: CondensedNodeGroupTangentVec(:,:)
       
 C----- DW --- periodic bc 
       INTEGER:: NPERSEG, NNPERBC
@@ -1204,9 +1204,9 @@ C    loadEleSlopeLim.eqv..true
       ALLOCATE (ESLCOUNT(MNP))
       ESLCOUNT = 0.d0
 
-C     For smoothing node pairs
-      ALLOCATE (SmoothingNodePairsTangentVec(MNP,2))
-      SmoothingNodePairsTangentVec(:,:) = 0.d0
+C     For condensed node group
+      ALLOCATE (CondensedNodeGroupTangentVec(MNP,2))
+      CondensedNodeGroupTangentVec(:,:) = 0.d0
 
 #ifdef CMPI
       ALLOCATE ( IDUMY(1), DUMY1(1), DUMY2(1) )

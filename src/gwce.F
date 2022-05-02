@@ -251,9 +251,9 @@ C
      &     CalculateTimeVaryingTau0, LoadAdvectionState, advectlocal,
      &     LoadAbsLayerSigma, absorblayer_sigma_eta,
      &     absorblayer_sigma_mnx, absorblayer_sigma_mny,
-     &     LoadSmoothingNodePairs,
-     &     ListSmoothingNodePairs, NListSmoothingNodePairs,
-     &     NNodesListSmoothingNodePairs
+     &     LoadCondensedNodeGroup,
+     &     ListCondensedNodeGroup, NListCondensedNodeGroup,
+     &     NNodesListCondensedNodeGroup
       USE SPONGELAYER
 
 #ifdef CMPI
@@ -1766,22 +1766,22 @@ C     (1) FRONT SIDE TO BACK SIDE
          ENDDO
       ENDIF
 
-C.... Smoothing the values at specified node pairs by taking average
-      IF(LoadSmoothingNodePairs) THEN
-         DO K=1,NListSmoothingNodePairs
-            I = ListSmoothingNodePairs(K,1)
+C.... Summing up the values at condensed node group nodes
+      IF(LoadCondensedNodeGroup) THEN
+         DO K=1,NListCondensedNodeGroup
+            I = ListCondensedNodeGroup(K,1)
             IF((NODECODE(I).NE.0)) THEN
                ! 1) Sum them up
-               DO L=2,NNodesListSmoothingNodePairs(K)
-                  J = ListSmoothingNodePairs(K,L)
+               DO L=2,NNodesListCondensedNodeGroup(K)
+                  J = ListCondensedNodeGroup(K,L)
                   COEFDTemp(I) = COEFDTemp(I) + COEFDTemp(J)
                   GWCE_LV(I)   = GWCE_LV(I) + GWCE_LV(J)
                   ETA1(I)      = ETA1(I) + ETA1(J)
                ENDDO
                ! 2) Distribute them
-               ETA1(I) = ETA1(I) / NNodesListSmoothingNodePairs(K)
-               DO L=2,NNodesListSmoothingNodePairs(K)
-                  J = ListSmoothingNodePairs(K,L)
+               ETA1(I) = ETA1(I) / NNodesListCondensedNodeGroup(K)
+               DO L=2,NNodesListCondensedNodeGroup(K)
+                  J = ListCondensedNodeGroup(K,L)
                   COEFDTemp(J) = COEFDTemp(I)
                   GWCE_LV(J)   = GWCE_LV(I)
                   ETA1(J)      = ETA1(I)
@@ -1842,64 +1842,11 @@ C...  JCG ITERATIVE MATRIX SOLVER
          END DO
       ENDIF
 
-CSB.. Copy the water elevation at the node to the other node if 1) the water elevation
-C     at the lower bottom depth is higher the bottom depth at the other node and
-C     2) the node with the higher bottom depth is dry and 3) the ISSUBMERGED64 status
-C     is non-zero.
-C
-   !    IF((NFLUXIB.EQ.1).AND.(ILump.NE.0)) THEN
-   !       I = 0                         
-   !       DO K = 1, NBOU
-   !       SELECT CASE(LBCODEI(I+1))
-   !       CASE(64)
-   !       DO J = 1,NVELL(K)
-   !       I = I + 1
-   !       IF(ISSUBMERGED64(I).NE.0) THEN
-   !       NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
-   !       NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
-   !       IF((NODECODE(NNBB1).EQ.0).AND.(NODECODE(NNBB2).NE.0).AND.
-   !   &         ((ETA2(NNBB2)+IFNLFA*DP(NNBB1)).GT.0.D0)) THEN
-   !          ETA2(NNBB1) = ETA2(NNBB2)
-   !          ! NODECODE(NNBB1) = 1
-   !          WRITE(*,'(A,I5,I5,E10.3,E10.3,I3)')
-   !   &        'A:',NNBB1,NNBB2,ETA2(NNBB1),ETA2(NNBB2),NODECODE(NNBB1)
-   !       ELSE IF((NODECODE(NNBB2).EQ.0).AND.(NODECODE(NNBB2).NE.0).AND.
-   !   &         ((ETA2(NNBB1)+IFNLFA*DP(NNBB2)).GT.0.D0)) THEN
-   !          ETA2(NNBB2) = ETA2(NNBB1)
-   !          ! NODECODE(NNBB2) = 1
-   !          WRITE(*,'(A,I5,I5,E10.3,E10.3,I3)')
-   !   &        'B:',NNBB1,NNBB2,ETA2(NNBB1),ETA2(NNBB2),NODECODE(NNBB2)
-   !          ENDIF
-   !       ENDIF
-   !       ENDDO
-   !       I = I + NVELL(K)
-   !       CASE(4,24,5,25)
-   !       I = I + NVELL(K)*2
-   !       CASE DEFAULT
-   !       I = I + NVELL(K)
-   !       END SELECT
-   !       ENDDO
-   !    ENDIF
-
 C...... DW, periodic bcs
       CALL UPDATE_PERSLNODES() ;
 C     Switch back to the original element table 
       CALL SWITCH_ELTAB_PERBC( IDIREC = 2 ) ;
 C......
-
-! C.... Smoothing the values at specified node pairs by taking average
-!       IF(LoadSmoothingNodePairs) THEN
-!          DO I=1,NP
-!             IF(SmoothingNodePairs(I).gt.0) THEN
-!                J = SmoothingNodePairs(I)
-!                IF((NODECODE(I)).NE.0.AND.(NODECODE(J).NE.0)) THEN
-!                   fBuf = ( ETA2(I) + ETA2(J) ) * 0.5D0
-!                   ETA2(I) = fBuf
-!                   ETA2(J) = fBuf
-!                ENDIF
-!             ENDIF
-!          ENDDO
-!       ENDIF
 
 #ifdef CMPI
       CALL UPDATER(ETA2,DUMY1,DUMY2,1)

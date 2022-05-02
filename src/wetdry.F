@@ -134,9 +134,9 @@ CWET...
       use nodalattributes, only : BFCdLLimit, fgamma, ftheta, fric,
      &   manningsn, hbreak, ifhybf, ifnlbf, iflinbf, loadManningsN,
      &   loadZ0B_var, z0b_var,
-     &   loadSmoothingNodePairs,
-     &   ListSmoothingNodePairs, NListSmoothingNodePairs,
-     &   NNodesListSmoothingNodePairs
+     &   loadCondensedNodeGroup,
+     &   ListCondensedNodeGroup, NListCondensedNodeGroup,
+     &   NNodesListCondensedNodeGroup
       USE BOUNDARIES, ONLY : NBV, NBOU, LBCODEI, NVELL, IBCONN,
      &   ISSUBMERGED64, NFLUXIB                 
       use global_3dvs, only : a, b, islip, kp, z0b, sigma, evtot, q
@@ -1021,15 +1021,15 @@ CWET...
       call allMessage(DEBUG,"Check point 10")
 #endif
 
-C.... Setting the same nodecode value at the nodes at each smoothing node pair
-      IF(LoadSmoothingNodePairs) THEN
-         DO K=1,NListSmoothingNodePairs
-            I = ListSmoothingNodePairs(K,1)
+C.... Setting the same nodecode value at the nodes at each condensed node group
+      IF(LoadCondensedNodeGroup) THEN
+         DO K=1,NListCondensedNodeGroup
+            I = ListCondensedNodeGroup(K,1)
             ! 0) DEFAULT VALUE
             NNC = NNODECODE(I)
             ! 1) FIND UPDATED VALUE 
-            DO L=2,NNodesListSmoothingNodePairs(K)
-               J = ListSmoothingNodePairs(K,L)
+            DO L=2,NNodesListCondensedNodeGroup(K)
+               J = ListCondensedNodeGroup(K,L)
                IF(NNODECODE(J).NE.NODECODE(J)) THEN
                   NNC = NNODECODE(J)
                   EXIT ! EXiT THE LOOP IF AN UPDATED NODECODE IS FOUND
@@ -1037,8 +1037,8 @@ C.... Setting the same nodecode value at the nodes at each smoothing node pair
             ENDDO
             ! 2) DISTRIBUTE IT
             NNODECODE(I) = NNC
-            DO L=2,NNodesListSmoothingNodePairs(K)
-               J = ListSmoothingNodePairs(K,L)
+            DO L=2,NNodesListCondensedNodeGroup(K)
+               J = ListCondensedNodeGroup(K,L)
                NNODECODE(J) = NNC
             ENDDO
          ENDDO
