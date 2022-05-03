@@ -76,6 +76,7 @@ C      Tao0MinMax            "min_and_max_primitive_weighting_in_continuity_equa
 C      River_et_WSE          "initial_river_elevation"
 C      IT_Fric               "internal_tide_friction"
 C      OverlandReductionFactor  "overland_reduction_factor"
+C      CondensedNodes        "condensed_nodes"
 C
 C-----------------------------------------------------------------------
       MODULE NodalAttributes
