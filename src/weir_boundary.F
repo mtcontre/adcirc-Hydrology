@@ -2289,13 +2289,13 @@ C...............FIND MAXIMUM DEPTH OVER THE CREST OF NEIGHBORS SB
     !  &           .AND.(WETNDHTOTMIN.GT.H0)) THEN
 !               IF((RBARWL1.GT.SUBMIN64).AND.(RBARWL2.GT.SUBMIN64)
 !     &            .AND.(RBARWLNEIMIN.GT.SUBMIN64)) THEN
-               IF(RBARWLL.GE.0.D0) THEN
+               IF(RBARWLL.GE.BARMIN64) THEN
 C...............THIS IS THE MAJOR DIFFERENCE OF IBTYPE=64 FROM IBTYPE=24.
 C               WATER LEVEL ON BOTH SIDES OF BARRIER ABOVE BARRIER -> CASE 0
                   FLUX = 0.D0
                   ISSUBMERGED64(I) = 1
                   ISSUBMERGED64(LBArray_Pointer(NNBB2)) = 1
-               ELSEIF((RBARWL1.LT.0.D0).AND.(RBARWL2.LT.0.D0)) THEN
+               ELSEIF((RBARWL1.LT.BARMIN64).AND.(RBARWL2.LT.BARMIN64)) THEN
 C...............WATER LEVEL ON BOTH SIDES OF BARRIER BELOW BARRIER -> CASE 1
                   FLUX=0.D0
                ELSEIF(ABS(RBARWL1-RBARWL2).LT.0.01D0) THEN
@@ -2368,6 +2368,14 @@ C..................INWARD SUPERCRITICAL FLOW -> CASE 6
                   FLUX=0
                ENDIF
                
+!                IF((NNBB2.EQ.298.OR.NNBB2.EQ.363).AND.
+!      &           (DP(NNBB2).EQ.3.D0)) THEN
+!                WRITE(16,'(A,I,I,E11.3,E11.3,E11.3,I3,I3,E11.3,E11.3)')
+!      &          'RBAR=',NNBB1,NNBB2,RBARWL1,RBARWL2,RBARWLL,
+!      &          ISSUBMERGED64(I),ISSUBMERGED64(LBArray_Pointer(NNBB2)),
+!      &          ETA2(NNBB1),ETA2(NNBB2)
+!                ENDIF
+
     !            IF(NNBB1.EQ.16.OR.NNBB1.EQ.504.OR.
     !  &            NNBB2.EQ.16.OR.NNBB2.EQ.504) THEN
     !               IF(FLUX.NE.0.D0) THEN

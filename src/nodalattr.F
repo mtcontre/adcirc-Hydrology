@@ -111,6 +111,7 @@ Csb   Specify node groups for 1D condensation.
       INTEGER              :: CondensedNodesNoOfVals
       INTEGER              :: CondensedNodesDefVal(4)
       INTEGER,ALLOCATABLE  :: CondensedNodes(:,:)
+      INTEGER,ALLOCATABLE  :: NCondensedNodes(:)
       INTEGER,ALLOCATABLE  :: ListCondensedNodes(:,:)
       INTEGER              :: NListCondensedNodes
       INTEGER,ALLOCATABLE  :: NNodesListCondensedNodes(:)
@@ -2864,8 +2865,11 @@ C     ----------------------------------------------------------------
          ENDIF
       ENDDO
 
+      ALLOCATE(NCondensedNodes(NumOfNodes))
       ALLOCATE(ListCondensedNodes(NListCondensedNodes,JMAX+1))
       ALLOCATE(NNodesListCondensedNodes(NListCondensedNodes))
+
+      NCondensedNodes(:) = 0
 
       K = 0
       DO I=1,NP
@@ -2873,11 +2877,17 @@ C     ----------------------------------------------------------------
             K = K + 1
             ListCondensedNodes(K,1) = I
             DO J=1,CondensedNodesNoOfVals
-               IF(CondensedNodes(I,J).EQ.0) EXIT
+               IF(CondensedNodes(I,J).LE.0) EXIT
                II = CondensedNodes(I,J)
+               NCondensedNodes(I) = J+1
                ListCondensedNodes(K,J+1) = II
                NNodesListCondensedNodes(K) = J+1
                CondensedNodes(II,1) = -1 ! Flag to tell that node II is one of condensed nodes
+            ENDDO
+            DO J=1,CondensedNodesNoOfVals
+               IF(CondensedNodes(I,J).LE.0) EXIT
+               II = CondensedNodes(I,J)
+               NCondensedNodes(II) = NCondensedNodes(I)
             ENDDO
          ENDIF
       ENDDO

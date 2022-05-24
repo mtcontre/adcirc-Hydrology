@@ -165,7 +165,7 @@ C*******************************************************************************
      &     NOLIBF,
      &     LoadAbsLayerSigma, absorblayer_sigma_eta,
      &     absorblayer_sigma_mnx, absorblayer_sigma_mny,
-     &     LoadCondensedNodes, CondensedNodes,
+     &     LoadCondensedNodes, CondensedNodes, NCondensedNodes,
      &     ListCondensedNodes, NListCondensedNodes,
      &     NNodesListCondensedNodes
       USE SUBDOMAIN, ONLY : subdomainOn, enforceBN, enforceUVOB, 
@@ -313,7 +313,9 @@ C..... DW
 C..... DW
 
 C..... SB
-         IF(CondensedNodes(NM1,1).NE.0) THEN
+         IF(NCondensedNodes(NM1).EQ.2 .OR.
+     &      NCondensedNodes(NM2).EQ.2 .OR.
+     &      NCondensedNodes(NM3).EQ.2) THEN
             CS = CondensedNodesTangentVec(NM1,1)
             SI = CondensedNodesTangentVec(NM1,2)
             CSCS1 = CS*CS
@@ -956,11 +958,6 @@ C     (1) FRONT SIDE TO BACK SIDE
                CASE(64)
                DO J = 1,NVELL(K)
                   I = I + 1
-   !                IF(NBV(I).EQ.1581) THEN
-   !                   WRITE(*,'(A,I3,I3)') 
-   !   &               'ISSUBMERGED64 AT NODE 1581:', ISSUBMERGED64(I),
-   !   &               NODECODE(NBV(I))
-   !                ENDIF
                   IF(ISSUBMERGED64(I).NE.0) THEN
                      NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
                      NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
@@ -970,10 +967,19 @@ C     (1) FRONT SIDE TO BACK SIDE
                         AUV(2,NNBB2) = AUV(2,NNBB1) + AUV(2,NNBB2)
                         AUV(3,NNBB2) = AUV(3,NNBB1) + AUV(3,NNBB2)
                         AUV(4,NNBB2) = AUV(4,NNBB1) + AUV(4,NNBB2)
+
                         MOM_LV_X(NNBB2) =
      &                       MOM_LV_X(NNBB1) + MOM_LV_X(NNBB2)
                         MOM_LV_Y(NNBB2) =
      &                       MOM_LV_Y(NNBB1) + MOM_LV_Y(NNBB2)
+
+                        AUV(1,NNBB1) = 0.D0    ! Set zero to avoid duplicated additions
+                        AUV(2,NNBB1) = 0.D0    !
+                        AUV(3,NNBB1) = 0.D0    !
+                        AUV(4,NNBB1) = 0.D0    !
+                        MOM_LV_X(NNBB1) = 0.D0 !
+                        MOM_LV_Y(NNBB1) = 0.D0 !
+                        
                      ENDIF
                   ENDIF
                ENDDO
