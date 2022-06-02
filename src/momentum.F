@@ -313,38 +313,39 @@ C..... DW
 C..... DW
 
 C..... SB
-         IF(NCondensedNodes(NM1).EQ.2 .OR.
-     &      NCondensedNodes(NM2).EQ.2 .OR.
-     &      NCondensedNodes(NM3).EQ.2) THEN
-            CS = CondensedNodesTangentVec(NM1,1)
-            SI = CondensedNodesTangentVec(NM1,2)
-            CSCS1 = CS*CS
-            CSSI1 = CS*SI
-            SISI1 = SI*SI
+         CSCS1 = 1.D0
+         CSSI1 = 0.D0
+         SISI1 = 1.D0
 
-            CS = CondensedNodesTangentVec(NM2,1)
-            SI = CondensedNodesTangentVec(NM2,2)
-            CSCS2 = CS*CS
-            CSSI2 = CS*SI
-            SISI2 = SI*SI
+         CSCS2 = 1.D0
+         CSSI2 = 0.D0
+         SISI2 = 1.D0
 
-            CS = CondensedNodesTangentVec(NM3,1)
-            SI = CondensedNodesTangentVec(NM3,2)
-            CSCS3 = CS*CS
-            CSSI3 = CS*SI
-            SISI3 = SI*SI
-         ELSE
-            CSCS1 = 1.D0
-            CSSI1 = 0.D0
-            SISI1 = 1.D0
+         CSCS3 = 1.D0
+         CSSI3 = 0.D0
+         SISI3 = 1.D0
+         IF(LoadCondensedNodes) THEN
+            IF(NCondensedNodes(NM1).EQ.2 .OR.
+     &         NCondensedNodes(NM2).EQ.2 .OR.
+     &         NCondensedNodes(NM3).EQ.2) THEN
+               CS = CondensedNodesTangentVec(NM1,1)
+               SI = CondensedNodesTangentVec(NM1,2)
+               CSCS1 = CS*CS
+               CSSI1 = CS*SI
+               SISI1 = SI*SI
 
-            CSCS2 = 1.D0
-            CSSI2 = 0.D0
-            SISI2 = 1.D0
+               CS = CondensedNodesTangentVec(NM2,1)
+               SI = CondensedNodesTangentVec(NM2,2)
+               CSCS2 = CS*CS
+               CSSI2 = CS*SI
+               SISI2 = SI*SI
 
-            CSCS3 = 1.D0
-            CSSI3 = 0.D0
-            SISI3 = 1.D0
+               CS = CondensedNodesTangentVec(NM3,1)
+               SI = CondensedNodesTangentVec(NM3,2)
+               CSCS3 = CS*CS
+               CSSI3 = CS*SI
+               SISI3 = SI*SI
+            ENDIF
          ENDIF
 C..... SB
 
