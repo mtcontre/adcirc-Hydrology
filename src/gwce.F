@@ -1741,12 +1741,6 @@ C     (1) FRONT SIDE TO BACK SIDE
                         IF(ISSUBMERGED64(I).NE.0) THEN
                            NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
                            NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
-                           ! fBUF = COEFD(NNBB1) + COEFD(NNBB2)
-                           ! COEFDTemp(NNBB1) = fBUF
-                           ! COEFDTemp(NNBB2) = fBUF
-                           ! fBUF = GWCE_LV(NNBB1) + GWCE_LV(NNBB2)
-                           ! GWCE_LV(NNBB1) = fBUF
-                           ! GWCE_LV(NNBB2) = fBUF
                            IF(NODECODE(NNBB1).NE.0.AND.NODECODE(NNBB2).NE.0) THEN
                                COEFDTemp(NNBB2) =
      &                           COEFD(NNBB1) + COEFD(NNBB2)
@@ -1754,6 +1748,8 @@ C     (1) FRONT SIDE TO BACK SIDE
      &                           GWCE_LV(NNBB1) + GWCE_LV(NNBB2)
                                ETA1(NNBB2) =
      &                           ( ETA1(NNBB1) + ETA1(NNBB2) ) * 0.5D0
+                               GWCE_LV(NNBB1) = 0.D0  ! Set zero to avoid duplicated additions
+                               ETA1(NNBB1) = ETA1(NNBB2) ! Substitute here to make duplicated averaging ineffective
                            ENDIF
                         ENDIF
                      ENDDO

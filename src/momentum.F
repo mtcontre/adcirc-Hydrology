@@ -224,11 +224,9 @@ C..... DW
 C......DW
 C..... SB
       INTEGER:: NNBB1, NNBB2, IS1, IS2
-      REAL(SZ):: fBUF, fBUF1, fBUF2, X1, Y1, X2, Y2, XL, SI, CS
+      REAL(SZ):: fBUF1, fBUF2
       REAL(SZ):: COEFIB64
-      REAL(SZ):: CSCS1, CSSI1, SISI1 ! cos*cos, cos*sin (=sin*cos), sin*sin
-      REAL(SZ):: CSCS2, CSSI2, SISI2 ! cos*cos, cos*sin (=sin*cos), sin*sin
-      REAL(SZ):: CSCS3, CSSI3, SISI3 ! cos*cos, cos*sin (=sin*cos), sin*sin
+      REAL(SZ):: CS, SI, CSCS, CSSI, SISI ! cos, sin, cos*cos, cos*sin (=sin*cos), sin*sin
 C.....
       call setMessageSource("mom_eqs_new_nc")
 #if defined(TIMESTEP_TRACE) || defined(ALL_TRACE)
@@ -311,43 +309,6 @@ C..... DW
          FDY2 = FDYE(2,IE)*sfdyfac ; !c FDY2=(X(NM1)-X(NM3))*MY !a2*my
          FDY3 = FDYE(3,IE)*sfdyfac ; !c FDY3=(X(NM2)-X(NM1))*MY !a3*my         
 C..... DW
-
-C..... SB
-         CSCS1 = 1.D0
-         CSSI1 = 0.D0
-         SISI1 = 1.D0
-
-         CSCS2 = 1.D0
-         CSSI2 = 0.D0
-         SISI2 = 1.D0
-
-         CSCS3 = 1.D0
-         CSSI3 = 0.D0
-         SISI3 = 1.D0
-         IF(LoadCondensedNodes) THEN
-            IF(NCondensedNodes(NM1).EQ.2 .OR.
-     &         NCondensedNodes(NM2).EQ.2 .OR.
-     &         NCondensedNodes(NM3).EQ.2) THEN
-               CS = CondensedNodesTangentVec(NM1,1)
-               SI = CondensedNodesTangentVec(NM1,2)
-               CSCS1 = CS*CS
-               CSSI1 = CS*SI
-               SISI1 = SI*SI
-
-               CS = CondensedNodesTangentVec(NM2,1)
-               SI = CondensedNodesTangentVec(NM2,2)
-               CSCS2 = CS*CS
-               CSSI2 = CS*SI
-               SISI2 = SI*SI
-
-               CS = CondensedNodesTangentVec(NM3,1)
-               SI = CondensedNodesTangentVec(NM3,2)
-               CSCS3 = CS*CS
-               CSSI3 = CS*SI
-               SISI3 = SI*SI
-            ENDIF
-         ENDIF
-C..... SB
 
 C...  Compute element averaged quantities
 
@@ -573,14 +534,11 @@ C...  Compute the lateral viscous terms for the element (symmetric velocity form
 
 C
 C...  LOAD NON-LUMPED ELEMENTAL COMPONENTS FOR X-MOMENTUM EQUATION INTO
-C...  TEMP_LV_A VECTOR FOR NODE NM1
+C...  TEMP_LV_A VECTOR FOR NODE NM1 ... Part 1
 
          TEMP_LV_A1=NCEle*DT*(
 C...  ADVECTIVE TERMS
-     &             -IFNLCT*((U1AvgDU1DXA+V1AvgDU1DYA)*CSCS1+
-     &                      (U1AvgDV1DXA+V1AvgDV1DYA)*CSSI1)
-C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
-     &             -GO2*DBTPDXA - DBCPDX1A
+     &             -IFNLCT*(U1AvgDU1DXA+V1AvgDU1DYA)
 C...  LATERAL VISCOUS TERMS
      &             -(1.5d0*(LSXXN1*FDX1+LSXYN1*FDY1)
      &               - AreaIE*TANPHI(NM1)*(LSXYN1+LSYXN1))/H1N1
@@ -589,14 +547,11 @@ C...  STILL NEED TO DIVIDE BY TOTAL AREA AROUND A NODE
 
 C...
 C...  LOAD NON-LUMPED ELEMENTAL COMPONENTS FOR X-MOMENTUM EQUATION INTO
-C...  TEMP_LV_A VECTOR FOR NODE NM2
+C...  TEMP_LV_A VECTOR FOR NODE NM2 ... Part 1
 C...
          TEMP_LV_A2=NCEle*DT*(
 C...  ADVECTIVE TERMS
-     &             -IFNLCT*((U1AvgDU1DXA+V1AvgDU1DYA)*CSCS2+
-     &                      (U1AvgDV1DXA+V1AvgDV1DYA)*CSSI2)
-C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
-     &             -GO2*DBTPDXA - DBCPDX2A
+     &             -IFNLCT*(U1AvgDU1DXA+V1AvgDU1DYA)
 C...  LATERAL VISCOUS TERMS
      &             -(1.5d0*(LSXXN2*FDX2+LSXYN2*FDY2)
      &               - AreaIE*TANPHI(NM2)*(LSXYN2+LSYXN2))/H1N2
@@ -605,14 +560,11 @@ C...  STILL NEED TO DIVIDE BY TOTAL AREA AROUND A NODE
 
 C...
 C...  LOAD NON-LUMPED ELEMENTAL COMPONENTS FOR X-MOMENTUM EQUATION INTO
-C...  TEMP_LV_A VECTOR FOR NODE NM3
+C...  TEMP_LV_A VECTOR FOR NODE NM3 ... Part 1
 C...
          TEMP_LV_A3=NCEle*DT*(
 C...  ADVECTIVE TERMS
-     &             -IFNLCT*((U1AvgDU1DXA+V1AvgDU1DYA)*CSCS3+
-     &                      (U1AvgDV1DXA+V1AvgDV1DYA)*CSSI3)
-C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
-     &             -GO2*DBTPDXA - DBCPDX3A
+     &             -IFNLCT*(U1AvgDU1DXA+V1AvgDU1DYA)
 C...  LATERAL VISCOUS TERMS
      &             -(1.5d0*(LSXXN3*FDX3+LSXYN3*FDY3)
      &               - AreaIE*TANPHI(NM3)*(LSXYN3+LSYXN3))/H1N3
@@ -620,14 +572,11 @@ C...  STILL NEED TO DIVIDE BY TOTAL AREA AROUND A NODE
      &             )
 
 C...  LOAD NON-LUMPED ELEMENTAL COMPONENTS FOR Y-MOMENTUM EQUATION INTO
-C...  TEMP_LV_B VECTOR FOR NODE NM1
+C...  TEMP_LV_B VECTOR FOR NODE NM1 ... Part 1
 
          TEMP_LV_B1=NCEle*DT*(
 C...  ADVECTIVE TERMS
-     &             -IFNLCT*((U1AvgDU1DXA+V1AvgDU1DYA)*CSSI1+
-     &                      (U1AvgDV1DXA+V1AvgDV1DYA)*SISI1)
-C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
-     &             -GO2*DBTPDYA - DBCPDY1A
+     &             -IFNLCT*(U1AvgDV1DXA+V1AvgDV1DYA)
 C...  LATERAL VISCOUS TERMS
      &             -(1.5d0*(LSYXN1*FDX1+LSYYN1*FDY1) 
      &               + AreaIE*TANPHI(NM1)*(LSXXN1-LSYYN1))/H1N1
@@ -636,14 +585,11 @@ C...  STILL NEED TO DIVIDE BY TOTAL AREA AROUND A NODE
      &             )
 
 C...  LOAD NON-LUMPED ELEMENTAL COMPONENTS FOR Y-MOMENTUM EQUATION INTO
-C...  TEMP_LV_B VECTOR FOR NODE NM2
+C...  TEMP_LV_B VECTOR FOR NODE NM2 ... Part 1
 
          TEMP_LV_B2=NCEle*DT*(
 C...  ADVECTIVE TERMS
-     &             -IFNLCT*((U1AvgDU1DXA+V1AvgDU1DYA)*CSSI2+
-     &                      (U1AvgDV1DXA+V1AvgDV1DYA)*SISI2)
-C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
-     &             -GO2*DBTPDYA - DBCPDY2A
+     &             -IFNLCT*(U1AvgDV1DXA+V1AvgDV1DYA)
 C...  LATERAL VISCOUS TERMS
      &             -(1.5d0*(LSYXN2*FDX2+LSYYN2*FDY2)
      &               + AreaIE*TANPHI(NM2)*(LSXXN2-LSYYN2))/H1N2
@@ -651,17 +597,115 @@ C...  STILL NEED TO DIVIDE BY TOTAL AREA AROUND A NODE
      &             )
 
 C...  LOAD NON-LUMPED ELEMENTAL COMPONENTS FOR Y-MOMENTUM EQUATION INTO
-C...  TEMP_LV_B VECTOR FOR NODE NM3
+C...  TEMP_LV_B VECTOR FOR NODE NM3 ... Part 1
 
          TEMP_LV_B3=NCEle*DT*(
 C...  ADVECTIVE TERMS
-     &             -IFNLCT*((U1AvgDU1DXA+V1AvgDU1DYA)*CSSI3+
-     &                      (U1AvgDV1DXA+V1AvgDV1DYA)*SISI3)
-C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
-     &             -GO2*DBTPDYA - DBCPDY3A
+     &             -IFNLCT*(U1AvgDV1DXA+V1AvgDV1DYA)
 C...  LATERAL VISCOUS TERMS
      &             -(1.5d0*(LSYXN3*FDX3+LSYYN3*FDY3)
      &               + AreaIE*TANPHI(NM3)*(LSXXN3-LSYYN3))/H1N3
+C...  STILL NEED TO DIVIDE BY TOTAL AREA AROUND A NODE
+     &             )
+
+C..... SB  Cancel acceleration normal to the 1D channel
+         IF(LoadCondensedNodes) THEN
+            IF(NCondensedNodes(NM1).EQ.2 .OR.  ! Do this only when all three nodes of the element have only one paired node for each
+     &         NCondensedNodes(NM2).EQ.2 .OR.
+     &         NCondensedNodes(NM3).EQ.2) THEN
+               ! NM1
+               CS = CondensedNodesTangentVec(NM1,1)
+               SI = CondensedNodesTangentVec(NM1,2)
+               CSCS = CS*CS
+               CSSI = CS*SI
+               SISI = SI*SI
+
+               fBUF1 = TEMP_LV_A1*CSCS + TEMP_LV_B1*CSSI
+               fBUF2 = TEMP_LV_A1*CSSI + TEMP_LV_B1*SISI
+               TEMP_LV_A1 = fBUF1
+               TEMP_LV_B1 = fBUF2
+
+               ! NM2
+               CS = CondensedNodesTangentVec(NM2,1)
+               SI = CondensedNodesTangentVec(NM2,2)
+               CSCS = CS*CS
+               CSSI = CS*SI
+               SISI = SI*SI
+
+               fBUF1 = TEMP_LV_A2*CSCS + TEMP_LV_B2*CSSI
+               fBUF2 = TEMP_LV_A2*CSSI + TEMP_LV_B2*SISI
+               TEMP_LV_A2 = fBUF1
+               TEMP_LV_B2 = fBUF2
+
+               ! NM3
+               CS = CondensedNodesTangentVec(NM3,1)
+               SI = CondensedNodesTangentVec(NM3,2)
+               CSCS = CS*CS
+               CSSI = CS*SI
+               SISI = SI*SI
+
+               fBUF1 = TEMP_LV_A3*CSCS + TEMP_LV_B3*CSSI
+               fBUF2 = TEMP_LV_A3*CSSI + TEMP_LV_B3*SISI
+               TEMP_LV_A3 = fBUF1
+               TEMP_LV_B3 = fBUF2
+            ENDIF
+         ENDIF
+C..... SB
+
+C
+C...  LOAD NON-LUMPED ELEMENTAL COMPONENTS FOR X-MOMENTUM EQUATION INTO
+C...  TEMP_LV_A VECTOR FOR NODE NM1 ... Part 2
+
+         TEMP_LV_A1=TEMP_LV_A1 + NCEle*DT*(
+C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
+     &             -GO2*DBTPDXA - DBCPDX1A
+C...  STILL NEED TO DIVIDE BY TOTAL AREA AROUND A NODE
+     &             )
+
+C...
+C...  LOAD NON-LUMPED ELEMENTAL COMPONENTS FOR X-MOMENTUM EQUATION INTO
+C...  TEMP_LV_A VECTOR FOR NODE NM2 ... Part 2
+C...
+         TEMP_LV_A2=TEMP_LV_A2 + NCEle*DT*(
+C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
+     &             -GO2*DBTPDXA - DBCPDX2A
+C...  STILL NEED TO DIVIDE BY TOTAL AREA AROUND A NODE
+     &             )
+
+C...
+C...  LOAD NON-LUMPED ELEMENTAL COMPONENTS FOR X-MOMENTUM EQUATION INTO
+C...  TEMP_LV_A VECTOR FOR NODE NM3 ... Part 2
+C...
+         TEMP_LV_A3=TEMP_LV_A3 + NCEle*DT*(
+C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
+     &             -GO2*DBTPDXA - DBCPDX3A
+C...  STILL NEED TO DIVIDE BY TOTAL AREA AROUND A NODE
+     &             )
+
+C...  LOAD NON-LUMPED ELEMENTAL COMPONENTS FOR Y-MOMENTUM EQUATION INTO
+C...  TEMP_LV_B VECTOR FOR NODE NM1 ... Part 2
+
+         TEMP_LV_B1=TEMP_LV_B1 + NCEle*DT*(
+C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
+     &             -GO2*DBTPDYA - DBCPDY1A
+C...  STILL NEED TO DIVIDE BY TOTAL AREA AROUND A NODE
+     &             )
+
+C...  LOAD NON-LUMPED ELEMENTAL COMPONENTS FOR Y-MOMENTUM EQUATION INTO
+C...  TEMP_LV_B VECTOR FOR NODE NM2 ... Part 2
+
+         TEMP_LV_B2=TEMP_LV_B2 + NCEle*DT*(
+C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
+     &             -GO2*DBTPDYA - DBCPDY2A
+C...  STILL NEED TO DIVIDE BY TOTAL AREA AROUND A NODE
+     &             )
+
+C...  LOAD NON-LUMPED ELEMENTAL COMPONENTS FOR Y-MOMENTUM EQUATION INTO
+C...  TEMP_LV_B VECTOR FOR NODE NM3 ... Part 2
+
+         TEMP_LV_B3=TEMP_LV_B3 + NCEle*DT*(
+C...  BAROTROPIC & BAROCLINIC PRESSURE GRADIENT TERMS
+     &             -GO2*DBTPDYA - DBCPDY3A
 C...  STILL NEED TO DIVIDE BY TOTAL AREA AROUND A NODE
      &             )
 
