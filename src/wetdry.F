@@ -1276,7 +1276,7 @@ C..... bathy slope becomes too large, i.e., when it exceeds slim.
                   DPM = SQRT(DPDXA*DPDXA + DPDYA*DPDYA)/AREAS(I)
                   IF (DPM .GT. 1D-5) THEN
                      ALPHAL(I) = SLIM*(SQRT(DPDXA*DPDXA + DPDYA*DPDYA)/
-     &                   ((1.D0/AREAS(I))*(DETADXA*-DPDXA + DETADYA*-DPDYA)))
+     &                   ((1.D0/AREAS(I))*(DETADXA*(-DPDXA) + DETADYA*(-DPDYA))))
                   ELSE
                      DETAM = SQRT(DETADXA*DETADXA + DETADYA*DETADYA)/AREAS(I)
                      ALPHAL(I) = SLIM/DETAM
