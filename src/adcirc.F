@@ -90,13 +90,13 @@ C*    ADCIRC initialize routine
 C******************************************************************************
       SUBROUTINE ADCIRC_Init(COMM, ROOTD)
       !USE, INTRINSIC :: IEEE_ARITHMETIC !jgfdebug ieee_is_nan()
-      USE VERSION, ONLY : adc_version, fileFmtMajor, fileFmtMinor, 
+      USE VERSION, ONLY : adc_version, fileFmtMajor, fileFmtMinor,
      &   FileFmtRev
       USE SIZES, ONLY : sz, rootDir, mnproc, mnwproc, mnallproc, myproc,
      &   read_local_hot_start_files, make_dirname, write_local_harm_files,
      &   get_numwriters, mnstae
       USE GLOBAL, ONLY : usingDynamicWaterLevelCorrection,
-     &   dynamicWaterLevelCorrection1, dynamicWaterLevelCorrection2, 
+     &   dynamicWaterLevelCorrection1, dynamicWaterLevelCorrection2,
      &   dynamicWaterLevelCorrectionSta, DEBUG, INFO, allMessage, itime, dtdp, statim,
      &   CHotHS, dtdpHS, g, FileFmtVersion, ifnlcat, nabout, ncchange,
      &   ifnlcate, ifnlct, ifnlcte, ifnlfa, ifwind, ihot, im, iths,
@@ -104,7 +104,7 @@ C******************************************************************************
      &   version_number, initLogging, setMessageSource, screenMessage,
      &   openLogFile, unsetMessageSource, np_global, rnp_global,
      &   scratchMessage, CTIP, L_N, writer_id
-      USE GLOBAL_3DVS, ONLY : AMB, goRho, goRhoOAMB 
+      USE GLOBAL_3DVS, ONLY : AMB, goRho, goRhoOAMB
       USE MESH, ONLY : Areas, TotalArea, totalAreaCalc, ne, np, SFEA
       USE GWCE, ONLY : initGWCE
       USE MOMENTUM, ONLY : initMomentumEq
@@ -133,9 +133,9 @@ C
       INTEGER :: i        ! command line argument counter
       !
       ! jgf51.52.07: Added command line option to just write out
-      ! the ADCIRC version number and exit. This is to allow 
+      ! the ADCIRC version number and exit. This is to allow
       ! external applications to query the version number so that
-      ! they can behave in version-appropriate ways. 
+      ! they can behave in version-appropriate ways.
       argcount  = iargc()  ! get number of command line arguments
       if ((argcount.gt.0).and.(myproc.eq.0)) then
          i = 0
@@ -143,12 +143,12 @@ C
             i = i + 1
             call getarg(i, cmdlinearg)
             select case(cmdlinearg(1:2))
-            case("-V","-v") 
+            case("-V","-v")
                ! write the version number string ... actually it is
-               ! a series of two or three numbers with two digits 
+               ! a series of two or three numbers with two digits
                ! separated by dots, e.g., 51.02 or 51.52.07
-               write(6,'(a)') trim(adc_version)                 
-               CALL EXIT(0) 
+               write(6,'(a)') trim(adc_version)
+               CALL EXIT(0)
             case default
                ! do nothing, this is some other command line argument
             end select
@@ -185,7 +185,7 @@ C
 #if defined(ADCIRC_TRACE) || defined(ALL_TRACE)
          call allMessage(DEBUG,"Return.")
 #endif
-         call unsetMessageSource()     
+         call unsetMessageSource()
          return
       endif
       CALL READ_INPUT()      ! Establish sizes by reading fort.14 and fort.15
@@ -250,7 +250,7 @@ C     jgf45.08 put this here so it can be used in hot start
 
 C...************* Make the L_N Tidal potential multiple function *************
 C... WJP: Feb 21 2018; moved here before hstart Feb 27 2019
-C..  Corrected long term species (unfortunately there is a mistake in old ADCIRC 
+C..  Corrected long term species (unfortunately there is a mistake in old ADCIRC
 C..  theory report that also propagated into some subsequent publications)
       IF (CTIP) THEN
 
@@ -290,13 +290,13 @@ C...Default beginning and ending time steps
       ITIME_END = NT  !NT is set in read_input.F
 
 C...  Determine the number of active elements (MJU), the total number of
-C...  elements (NODELE) and the total area of elements (TotalArea) 
+C...  elements (NODELE) and the total area of elements (TotalArea)
 C...  attached to each node
       call totalAreaCalc()
       !
       !
-      ! jgf52.08.20: Compute master time which is referenced to the beginning 
-      ! time of the model run. This is needed here only because we need to 
+      ! jgf52.08.20: Compute master time which is referenced to the beginning
+      ! time of the model run. This is needed here only because we need to
       ! determine whether to load min/max files in subroutine initOutput2D().
       ! If the time in the min/max file is later than the current time
       ! in ADCIRC, we don't load the min/max files. TODO: This is computed
@@ -313,8 +313,8 @@ C...  attached to each node
          allocate(dynamicWaterLevelCorrection1(np))
          allocate(dynamicWaterLevelCorrection2(np)) ! used in timestepping
          allocate(dynamicWaterLevelCorrectionSta(mnstae))
-         call initDynamicWaterLevelCorrection(timeloc) ! initializes the i/o 
-         call getDynamicWaterLevelCorrections(dynamicWaterLevelCorrection2, timeloc) ! populate 
+         call initDynamicWaterLevelCorrection(timeloc) ! initializes the i/o
+         call getDynamicWaterLevelCorrections(dynamicWaterLevelCorrection2, timeloc) ! populate
       endif
 C
 C     jgf51.21.24: Initialize output.
@@ -362,7 +362,7 @@ C
       call allMessage(DEBUG,"Return.")
 #endif
       call unsetMessageSource()
-      
+
       RETURN
       END SUBROUTINE ADCIRC_Init
 
@@ -390,6 +390,7 @@ C
       INTEGER, OPTIONAL :: NTIME_STP
       REAL(8) :: TimeLoc
 C
+
       call setMessageSource("ADCIRC_Run")
 #if defined(ADCIRC_TRACE) || defined(ALL_TRACE)
       call allMessage(DEBUG,"Enter.")
@@ -419,7 +420,9 @@ C
 C
       call allMessage(INFO,"Begin timestepping.")
       DO 100 ITIME=ITIME_BGN,ITIME_END
+
         CALL TIMESTEP(ITIME,TimeLoc)
+
 C
 #ifdef CSWAN
 Casey 090302: If it is time, then call the following subroutine
@@ -451,7 +454,7 @@ C
       call allMessage(DEBUG,"Return.")
 #endif
       call unsetMessageSource()
-      
+
       RETURN
       END SUBROUTINE ADCIRC_Run
 
@@ -507,7 +510,7 @@ C*    jgf50.44: Mostly just needed so that we can clean up mpi when
 C*    bombing out.
 C******************************************************************************
       SUBROUTINE ADCIRC_Terminate(NO_MPI_FINALIZE)
-      USE GLOBAL, ONLY : DEBUG, INFO, setMessageSource, allMessage, 
+      USE GLOBAL, ONLY : DEBUG, INFO, setMessageSource, allMessage,
      &   unsetMessageSource
 #ifdef CMPI
       USE MESSENGER, ONLY : subdomainFatalError, msg_fini
@@ -532,7 +535,7 @@ C
         CALL MSG_FINI()
       ENDIF
 #endif
-      CALL EXIT(1) 
+      CALL EXIT(1)
 C
 #if defined(ADCIRC_TRACE) || defined(ALL_TRACE)
       call allMessage(DEBUG,"Return.") ! should be unreachable
@@ -573,7 +576,7 @@ C-----------------------------------------------------------------------
         USE GLOBAL,ONLY: terminate_localproc, screenUnit
 #ifdef HAVE_MPI_MOD
         USE MPI
-#endif        
+#endif
         IMPLICIT NONE
         INTEGER :: TERM_LOCAL(2)
         INTEGER :: TERM_GLOBAL(2)
@@ -603,4 +606,3 @@ C******************************************************************************
       END MODULE ADCIRC_Mod
 C******************************************************************************
 C******************************************************************************
-
