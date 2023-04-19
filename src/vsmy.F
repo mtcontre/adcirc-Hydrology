@@ -111,6 +111,7 @@ c.RJW merged 08282008 Casey 071219: Added the following variable declarations fr
 Casey 140701: Prevent depths from becoming negative in bottom roughness calculations.
      &                   H0
       USE GLOBAL_3DVS
+      USE CONSTANTS, ONLY: G
       USE WRITE_OUTPUT, ONLY : writeOutput3D
       USE MESH, ONLY : NP, DP, NM, X, Y, NODELE, AREAS, LBArray_Pointer,  
      &                  NEITABELE, NEITAB, NNEIGH, SFAC
@@ -2683,7 +2684,7 @@ c
 c SUBROUTINES
 c
 c turb        : main module - handles input, run control and output.
-c TRIDAG      : tridiagonal matrix solver
+c ADC_TRIDAG  : tridiagonal matrix solver
 c
 c
 c USER'S GUIDE
@@ -2753,6 +2754,7 @@ c************************************************************************
 Cjgfdebug      USE GLOBAL, ONLY : ScreenUnit
 Cjgfdebug      USE GLOBAL_3DVS, EXCEPT_BSX => BSX ,EXCEPT_BSY => BSY
       USE GLOBAL_3DVS
+      USE CONSTANTS, ONLY: G
 Crjwdebug     USE NodalAttributes, ONLY : Z0B_var
       IMPLICIT NONE
 
@@ -3087,7 +3089,7 @@ c     &         -KQnm(n,2)*coef5*q2prev(n)     !lumping
 
 c     Solve the system for q2
 
-      CALL TRIDAG(Mqa,Mqb,Mqc,LVq,q2,nfen)
+      CALL ADC_TRIDAG(Mqa,Mqb,Mqc,LVq,q2,nfen)
 
 c     Transfer to global array and check for zero or negative values
 c     (generally for startup)
@@ -3171,7 +3173,7 @@ c
 
 c     Solve the system for q2l
 
-         CALL TRIDAG(Mqa,Mqb,Mqc,LVq,q2l,nfen)
+         CALL ADC_TRIDAG(Mqa,Mqb,Mqc,LVq,q2l,nfen)
 
 c     Transfer to global array and check for stability limit
 
@@ -3240,7 +3242,7 @@ C***********************************************************************
 
 
 C***********************************************************************
-C Subroutine tridag                                                    *
+C Subroutine ADC_TRIDAG                                                *
 C                                                                      *
 C     -----------------------------------------------------------------*
 C     |SOLVER FOR A VECTOR U OF LENGTH N FROM A SET OF LINEAR          *
@@ -3261,7 +3263,7 @@ C                                                                      *
 C    Adapted from Numerical Recipes chapter 2                          *
 C***********************************************************************
 c
-      SUBROUTINE TRIDAG(A,B,C,R,U,N)
+      SUBROUTINE ADC_TRIDAG(A,B,C,R,U,N)
       USE GLOBAL, ONLY : ScreenUnit
       USE GLOBAL_3DVS, ONLY : SZ, setMessageSource,
      &    unsetMessageSource, allMessage, logMessage, DEBUG, ECHO, INFO
@@ -3271,7 +3273,7 @@ c
       REAL(SZ) :: A(N),B(N),C(N),R(N),U(N)
       REAL(SZ) :: BET,GAM(N)
 
-      call setMessageSource("tridag")
+      call setMessageSource("ADC_tridag")
 #if defined(VSMY_TRACE) || defined(ALL_TRACE)
       call allMessage(DEBUG,"Enter.")
 #endif
@@ -3307,7 +3309,7 @@ c
       call unsetMessageSource()
       RETURN
 C***********************************************************************
-      END SUBROUTINE TRIDAG
+      END SUBROUTINE ADC_TRIDAG
 C***********************************************************************
 
 
@@ -4036,7 +4038,8 @@ C   kmd48.33bc need to add variables for new equation of state
      &                        SIGMA, EQNSTATE, A, B, setMessageSource,
      &    unsetMessageSource, allMessage, logMessage, DEBUG, ECHO, INFO
 Cjgfdebug      USE GLOBAL, ONLY : NP,RHOWAT0, ScreenUnit
-      USE GLOBAL, ONLY : RHOWAT0, ETA2, IFNLFA, G
+      USE GLOBAL, ONLY : ETA2, IFNLFA
+      USE CONSTANTS, ONLY: RHOWAT0, G
       USE MESH, ONLY : NP, DP
       IMPLICIT NONE
       INTEGER NH,N

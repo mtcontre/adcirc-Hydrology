@@ -363,10 +363,10 @@ C----------------------------------------------------------------------
      &   dynamicWaterLevelCorrectionSpoolCounter, dynamicWaterLevelCorrection2,
      &   usingdynamicWaterLevelCorrection, dynamicWaterLevelCorrectionStaSpoolCounter,
      &   dynamicWaterLevelCorrectionFilePos, dynamicWaterLevelCorrectionSta,
-     &   dynamicWaterLevelCorrectionStaFilePos, PRBCKGRND,
-! kmd -v55 added for precipitation
-     &   ncrain, totalrain, totalrainapp, rain00, igrp, irainstp,
+     &   dynamicWaterLevelCorrectionStaFilePos,
+     &   ncrain, totalrain, totalrainapp, rain00, igrp, irainstp, ! kmd -v55 added for precipitation
      &   nscour, nscougr
+      USE CONSTANTS, ONLY: PRBCKGRND
 
       USE MESH, ONLY : NP, NE, DP, NM, ICS, labels
       USE NodalAttributes, ONLY : OutputTau0, Tau0Var, LoadEleSlopeLim,
@@ -1059,7 +1059,7 @@ C         write(16,*) 'Allocating IceDescript' !tcm v49.64.01 added for ice
       IceDescript % array                => CICEOUT
       IceDescript % array_g              => CICEOUT_g
       IceDescript % field_name           = 'Ice'
-      if (ncice.eq.0.or.ncice.eq.14) then
+      if (ncice.eq.0) then
          IceDescript % writeFlag         = .false.
       endif
 
@@ -1463,17 +1463,10 @@ C      IF (mnproc.gt.1) THEN
 !      IF ( (MNPROC.gt.1) .and. (MyProc.eq.0) ) THEN
       IF ( (MNPROC.gt.1) .and. (MyProc.eq.0)
      &      .and. (.NOT. WRITE_LOCAL_FILES)  ) THEN
-
-          ! DW, since ESLDescript%writeFlag = .false.,
-          !   a global array will not be reseved for this field.
-          CALL REAL_FIELD_ALLOCATE( OFF,
-     &         ESLCOUNT_G, NP_G, 0.d0 ) ;
-!C------------ DW
-!          if ( writeESLNodes ) then
-!             CALL REAL_FIELD_ALLOCATE( OFF,
-!    &            ESLONOFF_g, NP_G, 0.d0 ) ;
-!          endif
-!C------------
+          if ( LoadEleSlopeLim ) then
+             CALL REAL_FIELD_ALLOCATE( 1,
+     &            ESLCOUNT_G, NP_G, 0.d0 ) ;
+          endif
          ! ALLOCATE(ESLONOFF_g(NP_G))
          ! ESLONOFF_g(:) = 0.d0
       ENDIF

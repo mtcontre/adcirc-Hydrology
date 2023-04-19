@@ -98,12 +98,13 @@ C******************************************************************************
       USE GLOBAL, ONLY : usingDynamicWaterLevelCorrection,
      &   dynamicWaterLevelCorrection1, dynamicWaterLevelCorrection2,
      &   dynamicWaterLevelCorrectionSta, DEBUG, INFO, allMessage, itime, dtdp, statim,
-     &   CHotHS, dtdpHS, g, FileFmtVersion, ifnlcat, nabout, ncchange,
+     &   CHotHS, dtdpHS, FileFmtVersion, ifnlcat, nabout, ncchange,
      &   ifnlcate, ifnlct, ifnlcte, ifnlfa, ifwind, ihot, im, iths,
-     &   nolica, nolicat, nolifa, nscreen, nstae, nt, rhowat0, screenunit,
+     &   nolica, nolicat, nolifa, nscreen, nstae, nt, screenunit,
      &   version_number, initLogging, setMessageSource, screenMessage,
      &   openLogFile, unsetMessageSource, np_global, rnp_global,
      &   scratchMessage, CTIP, L_N, writer_id
+      USE CONSTANTS, ONLY: g, rhowat0
       USE GLOBAL_3DVS, ONLY : AMB, goRho, goRhoOAMB
       USE MESH, ONLY : Areas, TotalArea, totalAreaCalc, ne, np, SFEA
       USE GWCE, ONLY : initGWCE
@@ -247,6 +248,9 @@ C     jgf45.08 put this here so it can be used in hot start
       ELSE
          IFNLFA=1
       ENDIF
+
+      !...Read the self attraction and loading file (fort.24)
+      call readSelfAttractionAndLoadingFile()
 
 C...************* Make the L_N Tidal potential multiple function *************
 C... WJP: Feb 21 2018; moved here before hstart Feb 27 2019
@@ -574,15 +578,10 @@ C-----------------------------------------------------------------------
       SUBROUTINE ADCIRC_CheckLocalTerminate()
         USE MESSENGER
         USE GLOBAL,ONLY: terminate_localproc, screenUnit
-#ifdef HAVE_MPI_MOD
         USE MPI
-#endif
         IMPLICIT NONE
         INTEGER :: TERM_LOCAL(2)
         INTEGER :: TERM_GLOBAL(2)
-#ifndef HAVE_MPI_MOD
-        INCLUDE 'mpif.h'
-#endif
         TERM_LOCAL(1) = TERMINATE_LOCALPROC
         TERM_LOCAL(2) = MYPROC
         CALL MPI_ALLREDUCE(TERM_LOCAL,TERM_GLOBAL,1,

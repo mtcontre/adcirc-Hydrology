@@ -12,9 +12,7 @@ C
      &    screenMessage, logMessage, allMessage, setMessageSource,
      &    unsetMessageSource, scratchMessage     
      
-#ifdef HAVE_MPI_MOD
       USE MPI
-#endif
       IMPLICIT NONE
       SAVE
 
@@ -49,6 +47,7 @@ C  Message-Passing Array space
       INTEGER, ALLOCATABLE :: STAT_I1(:,:), STAT_I2(:,:)
       INTEGER, ALLOCATABLE :: REQ_R1(:), REQ_R2(:), REQ_R3(:)
       INTEGER, ALLOCATABLE :: STAT_R1(:,:), STAT_R2(:,:), STAT_R3(:,:)
+      INTEGER, ALLOCATABLE :: REQ_M4R(:), STAT_M4R(:,:) !sb 10/13/2022
       INTEGER, ALLOCATABLE :: REQ_R3D(:), STAT_R3D(:,:)
       INTEGER, ALLOCATABLE :: REQ_C3D(:), STAT_C3D(:,:)
       INTEGER, ALLOCATABLE :: INDX(:)
@@ -76,9 +75,6 @@ C  vjp  10/3/2006
 C----------------------------------------------------------------------
       SUBROUTINE MSG_INIT (MPI_COMM)
       IMPLICIT NONE
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       INTEGER, OPTIONAL :: MPI_COMM
       INTEGER :: I
       INTEGER, ALLOCATABLE :: RANKS(:)  ! array of mpi ranks for compute processors
@@ -205,9 +201,6 @@ C  vjp  8/29/1999
 C---------------------------------------------------------------------
       SUBROUTINE MSG_FINI (NO_MPI_FINALIZE)
       IMPLICIT NONE
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       LOGICAL, OPTIONAL :: NO_MPI_FINALIZE
       INTEGER I
 C
@@ -299,9 +292,6 @@ C---------------------------------------------------------------------
       USE GLOBAL_3DVS, ONLY : NSTA3DD, NSTA3DV, NSTA3DT,
      &                        NSTA3DD_G, NSTA3DV_G, NSTA3DT_G,
      &  IMAP_STA3DD_LG, IMAP_STA3DV_LG, IMAP_STA3DT_LG
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       INTEGER :: IDPROC, NLOCAL, I, J, jdumy_loc
       INTEGER :: jdumy,jdumy_G,jdumy_max, inputFileFmtVn
       CHARACTER(10) :: BlkName
@@ -503,9 +493,6 @@ C  Routine allocates message-passing space
 C  vjp  10/01/2006
 C---------------------------------------------------------------------
       SUBROUTINE MSG_START ()
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       INTEGER :: J
 C
       call setMessageSource("msg_start")
@@ -522,6 +509,8 @@ C
       ALLOCATE ( STAT_R1(MPI_STATUS_SIZE,RDIM),
      &           STAT_R2(MPI_STATUS_SIZE,RDIM),
      &           STAT_R3(MPI_STATUS_SIZE,RDIM) )
+      ALLOCATE ( REQ_M4R(RDIM) ) !sb 10/13/2022
+      ALLOCATE ( STAT_M4R(MPI_STATUS_SIZE,RDIM) ) !sb 10/13/2022
 
       IF (C3D) THEN
          ALLOCATE ( SENDBUF(2*MNP*MNFEN,NEIGHPROC) )
@@ -553,9 +542,6 @@ C
 C  vjp  8/06/1999
 C---------------------------------------------------------------------
       SUBROUTINE UPDATEI( IVEC1, IVEC2, NMSG )
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       INTEGER,   INTENT(IN) :: NMSG
       INTEGER,   INTENT(INOUT) :: IVEC1(*),IVEC2(*)
       INTEGER :: N,I,J,NCOUNT,NFINI,TOT
@@ -656,15 +642,12 @@ C---------------------------------------------------------------------
 C---------------------------------------------------------------------
 C     S U B R O U T I N E   U P D A T E R
 C---------------------------------------------------------------------
-C  Update 1, 2, or 3 Integer Arrays's Ghost Cells using asynchronous
+C  Update 1, 2, or 3 Real Arrays's Ghost Cells using asynchronous
 C  and persistent message-passing.
 C
 C  vjp  8/06/1999
 C---------------------------------------------------------------------
       SUBROUTINE UPDATER( VEC1, VEC2, VEC3, NMSG )
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       INTEGER,  INTENT(IN) ::  NMSG ! number of arrays to pass
       REAL(SZ), INTENT(INOUT) ::  VEC1(*),VEC2(*),VEC3(*)
       integer :: j  ! loop counter for neighboring subdomains
@@ -826,6 +809,100 @@ C---------------------------------------------------------------------
       END SUBROUTINE UPDATER
 C---------------------------------------------------------------------
 
+C---------------------------------------------------------------------
+C     S U B R O U T I N E   U P D A T E M A T 4 R
+C---------------------------------------------------------------------
+C  Update a 4-row real matrix's ghost cells using asynchronous
+C  and persistent message-passing.
+C
+C  sb  10/13/2022
+C---------------------------------------------------------------------
+      SUBROUTINE UPDATEM4R( M4R )
+      REAL(SZ), INTENT(INOUT) ::  M4R(:,:)
+      integer :: j  ! loop counter for neighboring subdomains
+      integer :: i  ! loop counter for nodes shared with a neighboring subdomain
+      integer :: nfini ! number of just-completed requests
+      integer :: n     ! loop counter for just-completed requests
+      integer :: tot   ! total number of completed requests
+      integer :: ncount ! num values passed to a particular subdomain neighbor
+      integer :: ir ! loop counter for rows
+C
+      call setMessageSource("updater")
+#if defined(MESSENGER_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Enter.") 
+#endif
+C 
+      ! 
+      ! loop over neighboring subdomains
+      DO J=1,NEIGHPROC
+         NCOUNT = 0
+         DO IR=1,4
+            ! loop over nodes shared as ghost nodes with this neighboring subdomain
+            DO I=1,NNODSEND(J)
+                  NCOUNT = NCOUNT+1
+                  ! store the matrix values in the send buffer            
+                  SENDBUF(NCOUNT,J)=M4R(IR,ISENDLOC(I,J))
+            ENDDO
+         ENDDO
+      ENDDO
+      IF (NCOUNT > MNP) THEN
+         WRITE(*,'(A)') 
+     &     'INSUFFICIENT MEMORY ALLOCATION FOR SENDBUF. TERMINATING.'
+         CALL MSG_FINI()
+         STOP
+      ENDIF
+      !
+      ! receive and send data to each neighboring subdomain, populating
+      ! the request handler array
+      DO J=1,NEIGHPROC
+         CALL MPI_IRECV( RECVBUF(1,J), 4*NNODRECV(J),
+     &      REALTYPE,IPROC(J), TAG, COMM, REQ_M4R(J),IERR)
+         CALL MPI_ISEND( SENDBUF(1,J), 4*NNODSEND(J),
+     &      REALTYPE,IPROC(J), TAG, COMM, REQ_M4R(J+NEIGHPROC),IERR)
+      ENDDO
+
+      TOT = 0
+      ! keep looping until the total number of completed communications 
+      ! equals the total number that were requested
+      DO WHILE (TOT.LT.RDIM)
+         DO N=1, RDIM
+            INDX(N) = 0 ! zero out the array of just-completed requests
+         ENDDO
+         CALL MPI_WAITSOME( RDIM,REQ_M4R,NFINI,INDX,STAT_M4R,IERR )
+         ! add the number of just-completed requests to the total
+         TOT = TOT + NFINI
+         ! loop over the just-completed requests
+         DO N=1, NFINI
+            ! if the request has just completed (TODO: I don't see how
+            ! indx(n) can be greater than rdim
+            IF (INDX(N).GT.0.AND.INDX(N).LE.RDIM)  THEN
+               ! if the request that just completed is a receive
+               IF (INDX(N).LE.NEIGHPROC) THEN
+                  ! j = subdomain neighbor number that sent this data
+                  J = INDX(N)
+                  NCOUNT = 0
+                  DO IR=1,4
+                     DO I=1,NNODRECV(J)
+                        NCOUNT = NCOUNT+1
+                        ! update this subdomain's ghost value with the real 
+                        ! value from the other subdomain
+                        M4R(IR,IRECVLOC(I,J)) = RECVBUF(NCOUNT,J)
+                     ENDDO
+                  ENDDO
+               ENDIF
+            ENDIF
+         ENDDO
+      ENDDO
+ 
+#if defined(MESSENGER_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Return.")
+#endif
+      call unsetMessageSource()
+      RETURN
+C--------------------------------------------------------------------- 
+      END SUBROUTINE UPDATEM4R
+C---------------------------------------------------------------------
+
 C..... DW:, for periodic bcs (this subroutine looks a bit ugly and probably does belongs here)
 C        - experiment periodic boundary conditions 
 C        - use in updating the pseudo residual of slave nodes when they are ghost nodes
@@ -838,9 +915,6 @@ C          3. Restore the residual of slave nodes
 
       IMPLICIT NONE
 
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
 
       INTEGER,  INTENT(IN) ::  NMSG
       REAL(SZ), INTENT(INOUT) ::  VEC1(*),VEC2(*),VEC3(*)
@@ -888,9 +962,6 @@ C
 C  tjc  6/24/2002
 C---------------------------------------------------------------------
       SUBROUTINE UPDATER3D( VEC )
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       REAL(SZ), INTENT(INOUT) ::  VEC(MNP,MNFEN)
       INTEGER :: N,I,J,K,NCOUNT,NFINI,TOT
 C
@@ -957,9 +1028,6 @@ C  and persistent message-passing.
 C  tjc  6/24/2002
 C---------------------------------------------------------------------
       SUBROUTINE UPDATEC3D( VEC )
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       COMPLEX(SZ), INTENT(INOUT) ::  VEC(MNP,MNFEN)
       INTEGER :: N,I,J,K,NCOUNT,NFINI,TOT
 C
@@ -1034,6 +1102,33 @@ C---------------------------------------------------------------------
       END SUBROUTINE UPDATEC3D
 C---------------------------------------------------------------------
 
+C---------------------------------------------------------------------
+C     F U N C T I O N   M S G _ M A X
+C---------------------------------------------------------------------
+C  Find a maximum integer value
+C---------------------------------------------------------------------
+      function msg_imax( v ) result(vmax)
+      integer n, i
+      integer kount
+      integer v, vmax
+C
+      call setMessageSource("psdot")
+#if defined(MESSENGER_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Enter.") 
+#endif
+C 
+      kount = 1
+      call MPI_ALLREDUCE( v, vmax, kount, MPI_INTEGER,
+     &     MPI_MAX, COMM, ierr)
+
+#if defined(MESSENGER_TRACE) || defined(ALL_TRACE)
+      call allMessage(DEBUG,"Return.")
+#endif
+      call unsetMessageSource()
+      return
+C---------------------------------------------------------------------      
+      end function msg_imax
+C---------------------------------------------------------------------
 
 C---------------------------------------------------------------------
 C     F U N C T I O N   P S D O T
@@ -1041,9 +1136,6 @@ C---------------------------------------------------------------------
 C  Parallel version of SDOT for ITPACKV module
 C---------------------------------------------------------------------
       function psdot( n, sx, sy ) result(gsum)
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       integer n, i
       real(8) lsum,gsum
       real(sz) sx(*),sy(*)
@@ -1091,9 +1183,6 @@ C  zc   5/01/12 performance enhancements
 C---------------------------------------------------------------------
       subroutine ps2dots( n, sd, sdt ,dot3rray)
       implicit none
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       integer,intent(in) :: n
       real(sz),intent(in) :: sd(n),sdt(n)
       real(sz),intent(inout) :: dot3rray(3)
@@ -1148,9 +1237,6 @@ C     zc   5/01/12 performance enhancements
 C---------------------------------------------------------------------
       subroutine ps3dots( n, sd, sdt ,su, dot3rray)
       implicit none
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       integer,intent(in)     :: n
       real(sz),intent(in)    :: sd(n),sdt(n),su(n)
       real(sz),intent(inout) :: dot3rray(3)
@@ -1202,9 +1288,6 @@ C---------------------------------------------------------------------
 C  Compute Number of nodes in entire domain.
 C---------------------------------------------------------------------
       SUBROUTINE ALLNODES( TOTNODES )
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       INTEGER I
       INTEGER LNODES,TOTNODES
       INTEGER kount !jgf46.00 added
@@ -1260,7 +1343,7 @@ C---------------------------------------------------------------------
         call mpi_bcast(global_array_local,np_global,realtype,0,COMM_COMP,ierr)
 
         do sd_node_number=1,np_local
-           local_array(sd_node_number) = global_array(abs(mapping(sd_node_number)))
+           local_array(sd_node_number) = global_array_local(abs(mapping(sd_node_number)))
         end do
 
 #if defined(MESSENGER_TRACE) || defined(ALL_TRACE)
@@ -1279,9 +1362,6 @@ C---------------------------------------------------------------------
 ! reading the same file at the same time
 !---------------------------------------------------------------------
         implicit none
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
         integer,intent(in)  :: global_array(*)
         integer,intent(in)  :: mapping(*) 
         integer,intent(in)  :: np_global
@@ -1331,9 +1411,6 @@ C     preventing desynchronization of MPI communications.
 C------------------------------------------------------------------------------
 C
       SUBROUTINE WetDrySum( NCCHANGE )
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       INTEGER NCCHANGE    !input flag,=1 if this subdomain has wetted or dried
       INTEGER SumNCChange !sum total of all flags from all subdomains
       INTEGER kount       !jgf46.00 to avoid compiler bug on certain platforms
@@ -1367,9 +1444,6 @@ C     that information is propagated to the other subdomains so that the
 C     velocities can be dumped to a file for debugging.
 C------------------------------------------------------------------------------
       SUBROUTINE WarnElevSum( WarnElevExceeded )
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       INTEGER WarnElevExceeded !=1 if this subdomain has exceeded warning elev
       INTEGER SumWarnElevExceeded !sum total of all flags from all subdomains
       INTEGER kount       ! to avoid compiler bug on certain platforms
@@ -1401,9 +1475,6 @@ C  Broadcast integer array from processor 0.
 C  vjp  9/26/2006
 C---------------------------------------------------------------------
       SUBROUTINE MSG_IBCAST( array, n)
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       INTEGER :: n, array(:)
 C
       call setMessageSource("msg_ibcast")
@@ -1428,9 +1499,6 @@ C     S U B R O U T I N E   M S G _ L B C A S T
 C---------------------------------------------------------------------
 C---------------------------------------------------------------------
       SUBROUTINE MSG_LBCAST(array, n)
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       INTEGER :: n
       LOGICAL :: array(:)
 C
@@ -1458,9 +1526,6 @@ C  Broadcast integer array from processor 0.
 C  vjp  9/26/2006
 C---------------------------------------------------------------------
       SUBROUTINE MSG_CBCAST( msg, n)
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       INTEGER n
       CHARACTER(*) :: msg
 C
@@ -1488,9 +1553,6 @@ C  Broadcast integer array from processor 0.
 C  vjp  9/26/2006
 C---------------------------------------------------------------------
       SUBROUTINE MSG_RBCAST( array, n)
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       INTEGER n
       REAL(sz) array(:,:,:)
 C
@@ -1518,9 +1580,6 @@ Casey 090327: Implement Seizo's buffering of radiation stress broadcasts.
 !=====Seizo Dividing Messenger
 C---------------------------------------------------------------------
       SUBROUTINE MSG_RBCASTD( array, in, jn, kn)
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       INTEGER, INTENT(IN) :: in, jn, kn
       REAL(sz), INTENT(INOUT) :: array(in,jn,kn)
       INTEGER i, j, k, icount, ntimes, nlast
@@ -1585,10 +1644,6 @@ C---------------------------------------------------------------------
 C---------------------------------------------------------------------
 C---------------------------------------------------------------------
       subroutine MSG_BARRIER()
-C      use messenger
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       integer myerr
       call mpi_barrier(comm,myerr)
       
@@ -1600,10 +1655,6 @@ C---------------------------------------------------------------------
       END MODULE MESSENGER
 
       subroutine MSG_ABORT()
-C      use messenger
-#ifndef HAVE_MPI_MOD
-      include 'mpif.h'
-#endif
       integer myerr, myerrcode
       call mpi_abort(comm,myerrcode,myerr)
       end subroutine MSG_ABORT

@@ -93,9 +93,10 @@ C----------------------------------------------------------------------------
 
       MODULE PRESIZES
 Casey 121019: Added multiplication factor to be used before sending winds to coupled wave models.
+      USE CONSTANTS, ONLY: waveWindMultiplier
       USE GLOBAL, ONLY :
      &    USE_TVW,TVW_FILE,NOUT_TVW,TOUTS_TVW,TOUTF_TVW,NSPOOL_TVW,
-     &    WaveWindMultiplier,outputWindDrag,slim,windlim
+     &    outputWindDrag,slim,windlim,directvelWD,useHF
 #if defined CSWAN || defined ADCSWAN
      &   ,SWAN_OutputHS,SWAN_OutputDIR,SWAN_OutputTM01,
      &    SWAN_OutputTPS,SWAN_OutputWIND,SWAN_OutputTM02,
@@ -223,7 +224,7 @@ C Logicals added for adcprep paths
 #endif
       NAMELIST /metControl/ WindDragLimit,DragLawString,outputWindDrag,rhoAir,
      &                       invertedBarometerOnElevationBoundary,nPowellSearchDomains
-      namelist /limitControl/ slim, windlim
+
       NAMELIST /TVWControl/ USE_TVW,TVW_FILE,NOUT_TVW,TOUTS_TVW,
      &    TOUTF_TVW,NSPOOL_TVW
       LOGICAL :: NETCDF_AVAIL ! true if netCDF was compiled in
@@ -417,7 +418,7 @@ C     jgf46.21 Added support for IBTYPE=52.
          case(3,13,23)
             NFLUXB=1
             NBBN=NBBN+NBN
-         case(4,24)
+         case(4,24,64)
             NFLUXI=1
             NIBP=NIBP+NBN
          case(5,25)
@@ -523,7 +524,7 @@ c...
 c... tcm v50.79 addition for metControl namelist
       logical :: found_metCon_nml  !flag to determine if the metControl namelist was present
 Casey 121019: Added multiplication factor to be used before sending winds to coupled wave models.
-      LOGICAL :: FOUND_WC_NML, FOUND_LIM_NML
+      LOGICAL :: FOUND_WC_NML
 #ifdef ADCNETCDF
 Casey 180318: Added NWS=13
       LOGICAL :: FOUND_OWINC_NML
@@ -577,7 +578,6 @@ C     tcm v50.66.02 -- additions for time varying bathymetry
 C
 C     tcm v50.79 -- addition for metControl namelist
       FOUND_metCon_NML = .FALSE.
-      FOUND_LIM_NML = .FALSE.
 #ifdef ADCNETCDF
 Casey 180318: Added NWS=13
       FOUND_OWINC_NML = .FALSE.
@@ -664,14 +664,6 @@ C.....REWIND THE FORT.15 FILE IN ORDER TO PROCESS THE REMAINING PIECES
          write(*,*) "INFO: The metControl namelist was not found."
       ELSE
          found_metCon_nml = .true.  !tcm v50.79 added
-      ENDIF
-      REWIND(15)
-
-       READ(UNIT=15,NML=limitControl,IOSTAT=IOS)
-      IF (IOS.gt.0) THEN
-         write(*,*) "INFO: The limitControl namelist was not found."
-      ELSE
-         FOUND_LIM_NML = .true.  !tcm v50.79 added
       ENDIF
       REWIND(15)
 

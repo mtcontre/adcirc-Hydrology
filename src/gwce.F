@@ -103,7 +103,8 @@ C.....for matrix conditioning,global to allow for reading in from hotstart file
 !----------------------------------------------------------------------
       subroutine initGWCE()
       use sizes, only : mnp
-      use global, only : dt, g, ilump, alloc_main11, alloc_main11_lumped
+      use global, only : dt, ilump, alloc_main11, alloc_main11_lumped
+      use constants, only: g
       use mesh, only : np
       use itpackv, only : dfault
       implicit none
@@ -223,39 +224,46 @@ C
      &   ESBIN1, ESBIN2, C2DDI, C3D, CBaroclinic, CGWCE_Advec_C1,
      &   CGWCE_Advec_C2, CGWCE_Advec_NC, CGWCE_LS_2PartQ, CGWCE_LS_2PartSQ,
      &   CGWCE_LS_2PartV, CGWCE_LS_2PartSV, CGWCE_LS_KGQ, CPRECOR,
-     &   CSmag_Eh, Smag_Comp_Flag, CTIP, DT, FluxSettlingIT, G, IFNLCAT,
+     &   CSmag_Eh, Smag_Comp_Flag, CTIP, DT, FluxSettlingIT, IFNLCAT,
      &   IFNLCT, IFNLFA, NBFR, NODECODE, NRS, NSCREEN, NCCHANGE, IDEN,
-     &   NWS, RAMPELEV, RAMPMETE, RES_BC_FLAG, RHOWAT0, screenUnit,
+     &   NWS, RAMPELEV, RAMPMETE, RES_BC_FLAG, screenUnit,
      &   SMAG_LOWER_LIM, SMAG_UPPER_LIM, TK, NOFF, UU1, VV1, QX1, QY1,
      &   PR1, TiP1, BSX1, BSY1, DUU1, DUV1, DVV1, WSX1, WSY1, VIDBCPDXOH,
      &   VIDBCPDYOH, CORIF, PER, FACE, FF, EFA, EMO, AMIG, PR2, LNM_BC,
      &   QN1, EN1, QN0, ElevDisc, QN2, EN0, iLump, BCFLAG_LNM, EN2,
-     &   TKM, NPERSEG, NTIP, NNPERBC, IPERCONN, VIDispDXOH, Bd, Ad, Cs2,
+     &   TKM, NPERSEG, NTIP, NNPERBC, IPERCONN, VIDispDXOH,
      &   VIDispDYOH, IFSFM, IFNL_HDP, CGWCE_HDP, CAliDisp, H0, ALPHAL, windlim,
      &   usingDynamicWaterLevelCorrection, dynamicWaterLevelCorrection1,
-! kmd-v53 -- added for precipitation and point source terms
+     &   COEFDTemp, COEFDTempMem  ! Added for VED1D  08-11-2022 SB
      &   RainfallCurr, RainODT, totalrain, PSCurr, PSODT,
-     &   NCRAIN, NCPSOURCE, CPS_RAMP
+     &   NCRAIN, NCPSOURCE, CPS_RAMP ! kmd-v53 -- added for precipitation and point source terms
 #ifdef CMPI
      &    , dumy1, dumy2, rnp_global
 #endif
+      USE CONSTANTS, ONLY: G, RHOWAT0, Bd, Ad, Cs2
       USE MESH, ONLY : NE, NP, NM, DP, NNeigh, NeiTab, TotalArea, FDXE,
      &   Areas, NEIMAX, SFAC, nneighele, neitabele, FDYE,
      &   SWITCH_ELTAB_PERBC, SFacEle, SFMYEle, SFMXEle, SFCXEle,
-     &   SFCYEle, YCSFacEle, TANPHI, SFCT, TANPHIEle
+     &   SFCYEle, YCSFacEle, TANPHI, SFCT, TANPHIEle, LBArray_Pointer,
+     &   X, Y
       USE BOUNDARIES, ONLY : NETA, NFLUXF, NFLUXB, NFLUXGBC, NFLUXIB,
-     &   NFLUXRBC, NOPE, NVEL, NBD, NBV, LBCODEI, BndLen2O3, NPEBC
+     &   NFLUXRBC, NOPE, NVEL, NBD, NBV, LBCODEI, BndLen2O3, NPEBC,
+     &   NBOU, NVELL, IBCONN, ISSUBMERGED64, NFLUXIB64_GBL  ! Added for VEW1D  08-11-2022 SB
       USE ITPACKV
       USE NodalAttributes, ONLY :
      &     LoadGeoidOffset, GeoidOffset, EVM, NOLIBF,
      &     TAU0VAR, HighResTimeVaryingTau0, FullDomainTimeVaryingTau0,
      &     CalculateTimeVaryingTau0, LoadAdvectionState, advectlocal,
+     &     LoadCondensedNodes, ListCondensedNodes, NListCondensedNodes, ! Added for VEW1D  08-11-2022 SB
+     &     NNodesListCondensedNodes, NCondensedNodes,                    !
 C... DW
      &     LoadAbsLayerSigma, absorblayer_sigma_eta,
      &     absorblayer_sigma_mnx, absorblayer_sigma_mny
       USE SPONGELAYER
 C... DW
-
+C... SB
+      USE VEW1D, ONLY : ROTATE_AT_CONDENSEDNODES_ALL
+C... SB
 #ifdef CMPI
       USE MESSENGER
 #endif
@@ -265,7 +273,7 @@ C... DW
 
       IMPLICIT NONE
 
-      INTEGER IE, JN, IJ, I, J                           !local loop counters
+      INTEGER IE, JN, IJ, I, J, K, L                     !local loop counters
       INTEGER IT
       INTEGER NM1, NM2, NM3, NMI1, NMI2, NMI3, NMJ1, NMJ2, NMJ3
       INTEGER NC1, NC2, NC3, NCEle, NCI, NCJ
@@ -326,6 +334,10 @@ C... DW
       INTEGER :: nbdj
       REAL(SZ) :: rff
       REAL(SZ) :: qforcei, qforcej
+C...... SB
+      REAL(SZ) :: SX, SY
+      INTEGER :: ROT_STATUS
+C...... SB
 C...... DW
       REAL(SZ):: SigmaAvg, Tau0Avg_S
       REAL(SZ):: SgN1_eta, SgN2_eta, SgN3_eta
@@ -346,6 +358,8 @@ C...... DW
       REAL(SZ) :: SPM1, SPM2, SPM3
       LOGICAL :: ETA_SPONGE = .false., GWCE_SPONGE = .false.
       REAL(SZ) :: Ma2, Cfac = 1.0_SZ, CfacS0 = 1.0_SZ
+      INTEGER :: NNBB1, NNBB2  ! Added for VEW1D  08-11-2022 SB
+      REAL(SZ):: fBuf          !
 
       IF ( LoadAbsLayerSigma ) THEN
          IF (NumNodesAbsLayer(1) > 0 ) ETA_SPONGE = .true.
@@ -907,6 +921,13 @@ C..... End DW
 
       ENDIF
 
+#ifdef CMPI
+      IF ((CGWCE_LS_2PartQ).OR.(CGWCE_LS_2PartSQ).OR.(CGWCE_LS_2PartV).OR.(CGWCE_LS_2PartSV)) THEN
+         CALL UPDATER(LSXX,LSXY,DUMY1,2)
+         CALL UPDATER(LSYX,LSYY,DUMY1,2)
+      ENDIF
+#endif
+
 C...  Assemble the GWCE RHS except for the boundary integral terms
 
       DO 1037 IE=1,NE
@@ -956,6 +977,17 @@ Corbitt 120322: Localized Advection
          T0N1=Tau0Var(NM1)
          T0N2=Tau0Var(NM2)
          T0N3=Tau0Var(NM3)
+C..... SB 2022-09-14
+C        Rorate the velocity and flux vectors at the condensed nodes
+C        so that they align with the stream direction
+         IF (LoadCondensedNodes) THEN
+            CALL ROTATE_AT_CONDENSEDNODES_ALL
+     &        (NM1,NM2,NM3,
+     &         U1N1,V1N1,U1N2,V1N2,U1N3,V1N3,
+     &         QX1N1,QY1N1,QX1N2,QY1N2,QX1N3,QY1N3,
+     &         ROT_STATUS)
+         ENDIF
+C..... SB
 C
 C.... DW: begin ! absorbing layer
 C
@@ -1248,6 +1280,9 @@ C        WJP: Add on the contribution from spherical correction term
 C        from the momentum equation
          ! (tan \phi V_{lambda})/R + f
          CorifAvg = CorifAvg + IFNLCT*TANPHIAvg*U1Avg
+C
+C...... Eliminate Coriols at condensed nodes  10/17/2022 sb
+         IF (LoadCondensedNodes.AND.ROT_STATUS.EQ.0) CorifAvg = 0.D0
 C
 C...... DW absorbing layer
 C
@@ -1643,8 +1678,8 @@ C...Note 3, Eta1 is the latest computed elevation (it was updated above).
       IF((NFLUXF.EQ.1).OR.(NFLUXB.EQ.1).OR.(NFLUXIB.EQ.1)
      &     .OR.(NFLUXGBC.EQ.1).OR.(NFLUXRBC.EQ.1)) THEN
          NBDJ=NBV(1)
-         IF (LBCODEI(1).LE.29) QFORCEJ=(QN2(1)-QN0(1))/DT2 +
-     &        Tau0VAR(NBDJ)*QN1(1)
+         IF ((LBCODEI(1).LE.29).OR.(LBCODEI(1).EQ.64))    ! 64 is added for VEW  08-11-2022 SB
+     &        QFORCEJ=(QN2(1)-QN0(1))/DT2 + Tau0VAR(NBDJ)*QN1(1)
 
          IF (LBCODEI(1).EQ.30) THEN
             H1=DP(NBDJ)+IFNLFA*ETA1(NBDJ)
@@ -1685,8 +1720,8 @@ C
             NBDJ=NBV(J)
             QFORCEI=QFORCEJ
 
-            IF(LBCODEI(J).LE.29) QFORCEJ=(QN2(J)-QN0(J))/DT2+
-     &           Tau0VAR(NBDJ)*QN1(J)
+            IF((LBCODEI(J).LE.29).OR.(LBCODEI(J).EQ.64))     ! 64 is added for VEW  08-11-2022 SB
+     &           QFORCEJ=(QN2(J)-QN0(J))/DT2 + Tau0VAR(NBDJ)*QN1(J)
             IF(LBCODEI(J).EQ.30) THEN
                H1=DP(NBDJ)+IFNLFA*ETA1(NBDJ)
                CELERITY=SQRT(G*H1)
@@ -1782,6 +1817,118 @@ C... DW, periodic bcs
       if (subdomainOn.and.enforceBN.eq.2) call enforceEib() ! NCSU Subdomain
       if (subdomainOn.and.enforceBN.eq.2) call enforceGWCELVob() ! NCSU Subdomain
 
+C<<.. SECTION FOR VEW1D (=1D channel)   08-11-2022 SB
+C.... Nodal equations at IBTYPE=64 VEW boundary nodes and at condensed nodes are
+C.... summed up together in the following part. First, the value on the front side,
+C.... i.e., the floodplain side, is summed to the back side, i.e., the channel side.
+C.... Secondly, the values at the condensed nodes which are most likely on channel
+C.... beds are summed together. Notice that by this second step the nodes on channel
+C.... bed hold the sum of all the values on the floodplain side and the grouped
+C.... condensed nodes. And then finally, the value on the backside, i.e. on the
+C.... channel bed, is copied to the front side, i.e., the floodplain side. Through
+C.... this procedure, the values at the floodplain nodes and (condensed) channel nodes
+C.... have the same values on both sides of the equations.
+C
+C.... Prep for the temporary LHS lumped array
+      IF(((NFLUXIB64_GBL.GT.0).AND.(ILump.NE.0)).OR.
+     &   (LoadCondensedNodes)) THEN
+         COEFDTemp => COEFDTempMem
+         COEFDTemp(:) = COEFD(:)
+      ELSE
+         COEFDTemp => COEFD
+      ENDIF
+C
+C     VEW: Sum front side values to back side
+      IF((NFLUXIB64_GBL.GT.0).AND.(ILump.NE.0)) THEN
+         I = 0
+         DO K = 1, NBOU
+            SELECT CASE(LBCODEI(I+1))
+                CASE(64)
+                    DO J = 1,NVELL(K)
+                        I = I + 1
+                        IF(ISSUBMERGED64(I).NE.0) THEN
+                           NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
+                           NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
+                           IF(NODECODE(NNBB1).NE.0.AND.NODECODE(NNBB2).NE.0) THEN
+                               COEFDTemp(NNBB2) =
+     &                           COEFD(NNBB1) + COEFD(NNBB2)
+                               GWCE_LV(NNBB2) =
+     &                           GWCE_LV(NNBB1) + GWCE_LV(NNBB2)
+                               ETA1(NNBB2) =
+     &                           ( ETA1(NNBB1) + ETA1(NNBB2) ) * 0.5D0
+                               GWCE_LV(NNBB1) = 0.D0  ! Set zero to avoid duplicated additions
+                               ETA1(NNBB1) = ETA1(NNBB2) ! Substitute here to make duplicated averaging ineffective
+                           ENDIF
+                        ENDIF
+                     ENDDO
+                     I = I + NVELL(K)
+                  CASE(4,24,5,25)
+                     I = I + NVELL(K)*2
+                  CASE DEFAULT
+                     I = I + NVELL(K)
+            END SELECT
+         ENDDO
+      ENDIF
+
+C.... CONDENSED NODES: Summing up the values at condensed nodes
+      IF((LoadCondensedNodes).AND.(ILump.NE.0)) THEN
+         DO K=1,NListCondensedNodes
+            I = ListCondensedNodes(K,1)
+            IF((NODECODE(I).NE.0)) THEN
+               ! 1) Sum them up
+               DO L=2,NNodesListCondensedNodes(K)
+                  J = ListCondensedNodes(K,L)
+                  COEFDTemp(I) = COEFDTemp(I) + COEFDTemp(J)
+                  GWCE_LV(I)   = GWCE_LV(I) + GWCE_LV(J)
+                  ETA1(I)      = ETA1(I) + ETA1(J)
+               ENDDO
+               ! 2) Distribute them
+               ETA1(I) = ETA1(I) / NNodesListCondensedNodes(K)
+               DO L=2,NNodesListCondensedNodes(K)
+                  J = ListCondensedNodes(K,L)
+                  COEFDTemp(J) = COEFDTemp(I)
+                  GWCE_LV(J)   = GWCE_LV(I)
+                  ETA1(J)      = ETA1(I)
+               ENDDO
+            ENDIF
+         ENDDO
+      ENDIF
+
+#ifdef CMPI
+      IF ((NFLUXIB64_GBL.GT.0.OR.LoadCondensedNodes)
+     &    .AND.(ILump.NE.0)) THEN
+         CALL UPDATER(COEFDTemp,GWCE_LV,DUMY1,2)
+      ENDIF
+#endif
+
+C     VEW: Copy values from back side to front side
+      IF((NFLUXIB64_GBL.GT.0).AND.(ILump.NE.0)) THEN
+         I = 0
+         DO K = 1, NBOU
+            SELECT CASE(LBCODEI(I+1))
+                CASE(64)
+                    DO J = 1,NVELL(K)
+                        I = I + 1
+                        IF(ISSUBMERGED64(I).NE.0) THEN
+                           NNBB1=NBV(I)     ! GLOBAL NODE NUMBER ON THIS SIDE OF BARRIER
+                           NNBB2=IBCONN(I)  ! GLOBAL NODE NUMBER ON OPPOSITE SIDE OF BARRIER
+                           IF(NODECODE(NNBB1).NE.0.AND.NODECODE(NNBB2).NE.0) THEN
+                              COEFDTemp(NNBB1) = COEFDTemp(NNBB2)
+                              GWCE_LV(NNBB1) = GWCE_LV(NNBB2)
+                              ETA1(NNBB1) = ETA1(NNBB2)
+                           ENDIF
+                        ENDIF
+                     ENDDO
+                     I = I + NVELL(K)
+                  CASE(4,24,5,25)
+                     I = I + NVELL(K)*2
+                  CASE DEFAULT
+                     I = I + NVELL(K)
+            END SELECT
+         ENDDO
+      ENDIF
+C..>>
+
       IF (ILump.eq.0) THEN ! default, fully consistent LHS
 C...  JCG ITERATIVE MATRIX SOLVER
          IPARM(1)=ITMAX
@@ -1793,10 +1940,10 @@ C...  JCG ITERATIVE MATRIX SOLVER
          END DO
       ELSE ! lumped LHS
          DO I = 1, NP
-            IF (COEFD(I).eq.0.0d0) THEN
+            IF (COEFDTemp(I).eq.0.0d0) THEN   ! COEFD --> COEFDTemp  08-11-2022 SB
                RDIAG = 0.0d0
             ELSE
-               RDIAG = 1.0d0 / COEFD(I)
+               RDIAG = 1.0d0 / COEFDTemp(I)   ! COEFD --> COEFDTemp  08-11-2022 SB
             ENDIF
             ETAS(I) = GWCE_LV(I) * RDIAG
          ENDDO
@@ -1920,9 +2067,9 @@ C
      &   ESBIN1, ESBIN2, C2DDI, C3D, CBaroclinic, CGWCE_Advec_C1,
      &   CGWCE_Advec_C2, CGWCE_Advec_NC, CGWCE_LS_2PartQ, CGWCE_LS_2PartSQ,
      &   CGWCE_LS_2PartV, CGWCE_LS_2PartSV, CGWCE_LS_KGQ, CPRECOR,
-     &   CSmag_Eh, Smag_Comp_Flag, CTIP, DT, FluxSettlingIT, G, IFNLCAT,
+     &   CSmag_Eh, Smag_Comp_Flag, CTIP, DT, FluxSettlingIT, IFNLCAT,
      &   IFNLCT, IFNLFA, NBFR, NODECODE, NRS, NSCREEN, NCCHANGE, IDEN,
-     &   NWS, RAMPELEV, RAMPMETE, RES_BC_FLAG, RHOWAT0, screenUnit,
+     &   NWS, RAMPELEV, RAMPMETE, RES_BC_FLAG, screenUnit,
      &   SMAG_LOWER_LIM, SMAG_UPPER_LIM, TK, NOFF, UU1, VV1, QX1, QY1,
      &   PR1, TiP1, BSX1, BSY1, DUU1, DUV1, DVV1, WSX1, WSY1, VIDBCPDXOH,
      &   VIDBCPDYOH, CORIF, PER, FACE, FF, EFA, EMO, AMIG, PR2, LNM_BC,
@@ -1932,6 +2079,7 @@ C
 #ifdef CMPI
      &   , dumy1, dumy2
 #endif
+      USE CONSTANTS, ONLY: G, RHOWAT0
       USE MESH, ONLY : NE, NP, NM, DP, X, Y, TotalArea, Areas, NeiTab,
      &                  NNEIGH, SFAC
       USE BOUNDARIES, ONLY : NETA, NFLUXB, NFLUXF, NFLUXGBC, NFLUXRBC,
@@ -2061,7 +2209,7 @@ C...  Initialize variables to zero if these forcings are not used
 
       IF (CTIP) THEN
       ELSE
-        TiPN1=0.d0
+        TiPN1=0.d0! kmd-v53 -- added for precipitation and point source terms
         TiPN2=0.d0
         TiPN3=0.d0
       ENDIF
@@ -2798,8 +2946,9 @@ C...Note 3, Eta1 is the latest computed elevation (it was updated above).
       IF((NFLUXF.EQ.1).OR.(NFLUXB.EQ.1).OR.(NFLUXIB.EQ.1)
      &     .OR.(NFLUXGBC.EQ.1).OR.(NFLUXRBC.EQ.1)) THEN
          NBDJ=NBV(1)
-         IF(LBCODEI(1).LE.29) QFORCEJ=(QN2(1)-QN0(1))/DT2 +
-     &        Tau0VAR(NBDJ)*QN1(1)
+         IF((LBCODEI(1).LE.29).OR.(LBCODEI(1).EQ.64))     ! 64 is added for VEW  08-22-2022 SB
+     &        QFORCEJ=(QN2(1)-QN0(1))/DT2 +
+     &          Tau0VAR(NBDJ)*QN1(1)
 
          IF(LBCODEI(1).EQ.30) THEN
             H1=DP(NBDJ)+IFNLFA*ETA1(NBDJ)
@@ -2823,8 +2972,8 @@ C...Note 3, Eta1 is the latest computed elevation (it was updated above).
             NBDJ=NBV(J)
             QFORCEI=QFORCEJ
 
-            IF(LBCODEI(J).LE.29) QFORCEJ=(QN2(J)-QN0(J))/DT2+
-     &           Tau0VAR(NBDJ)*QN1(J)
+            IF((LBCODEI(J).LE.29).OR.(LBCODEI(J).EQ.64))     ! 64 is added for VEW  08-22-2022 SB
+     &         QFORCEJ=(QN2(J)-QN0(J))/DT2+Tau0VAR(NBDJ)*QN1(J)
 
             IF(LBCODEI(J).EQ.30) THEN
                H1=DP(NBDJ)+IFNLFA*ETA1(NBDJ)

@@ -56,8 +56,8 @@ C
      &    inundationOutput, ITHS, METONLY, NCICE, NDDT, NFFR, NHSINC,
      &    NHSTAR, NOLIFA, NRamp, NRS, NSCREEN, NTIF, QTIME1, QTIME2, Ramp,
      &    RampElev, RampExtFlux, RampMete, RampTip, RampWRad, RBCRATIO,
-     &    RBCTIME1, RBCTIME2, RBCTIMEINC, REFTIM, RES_BC_FLAG, RhoWat0,
-     &    RSTIME1, RSTIME2, NWS, RSTIMINC, SCREENUNIT, SIGT0, STATIM, TK,
+     &    RBCTIME1, RBCTIME2, RBCTIMEINC, REFTIM, RES_BC_FLAG,
+     &    RSTIME1, RSTIME2, NWS, RSTIMINC, SCREENUNIT, STATIM, TK,
      &    WVNXOUT, WVNYOUT, WarnElev, PERT, FACET, FFT, AMIGT, SALTPHA,
      &    SALTAMP, NODECODE, scratchMessage, TPK, NOFF, DASigT, FFF,
      &    QNPH, QNAM, ENPH, ENAM, ETRF, FPER, FFACE, ETA1, FAMIG, LNM_BC,
@@ -197,6 +197,7 @@ C....... DW
       LOGICAL, SAVE:: FIRST_ENTER = .TRUE.
       INTEGER:: NBDI, istep
 C.......
+      LOGICAL ISFRONT
 
       call setMessageSource("timestep")
 #if defined(TIMESTEP_TRACE) || defined(ALL_TRACE)
@@ -981,8 +982,6 @@ C...
             END DO
           END DO
          END IF
-!---------------------------------------------------------------------------------------------------
-! arash wanted to debug, and everything seems to be fine.
 
          IF((NFFR.EQ.0).OR.(NFFR.EQ.-1)) THEN
             IF(TimeLoc.GT.QTIME2) THEN
@@ -993,34 +992,17 @@ C...
      &                 .OR.(LBCODEI(J).EQ.22)) THEN
                      QNIN1(J)=QNIN2(J)
                      READ(20,*) QNIN2(J)
-
-!                     write(*,*) 'inside timestep: IT = ', IT
-!                     write(*,*) 'inside timestep: J, QNIN2 = ', J, QNIN2(J)
-!                      QNIN2 = 0.0d0  ! arash
-
-                  ENDIF
-                  IF(LBCODEI(J).EQ.32) THEN
+                  ELSEIF(LBCODEI(J).EQ.32) THEN
                      QNIN1(J)=QNIN2(J)
                      ENIN1(J)=ENIN2(J)
                      READ(20,*) QNIN2(J),ENIN2(J)
-
-!                     write(*,*) 'inside timestep: IT = ', IT
-!                     write(*,*) 'inside timestep: we should not be here!'
-
                   ENDIF
                END DO
             ENDIF
-!---------------------------------------------------------------------------------------------------
+
             QTRATIO=(TimeLoc-QTIME1)/FTIMINC
-
-!            if (myproc == 12) write(*,*) 'QTRATIO = ', QTRATIO
-            !write(*,*) 'myproc =', myproc
-
-
-            DO I=1,NVEL
-               QN2(I)=RampExtFlux*(QNIN1(I)+QTRATIO*(QNIN2(I)-QNIN1(I)))
-               EN2(I)=RampExtFlux*(ENIN1(I)+QTRATIO*(ENIN2(I)-ENIN1(I)))
-            END DO
+            QN2=RampExtFlux*(QNIN1+QTRATIO*(QNIN2-QNIN1))
+            EN2=RampExtFlux*(ENIN1+QTRATIO*(ENIN2-ENIN1))
          ENDIF
 
 CRAL_add_42.06f
@@ -1128,6 +1110,17 @@ C                     ACROSS A WEIR
                         I = I + 1
                         CALL COMPUTE_INTERNAL_BOUNDARY_FLUX(I,J,K,
      &                      TIMELOC,QN2(I))
+                    ENDDO
+                CASE(64)
+                    DO J = 1,NVELL(K)*2
+                        I = I + 1
+                        IF(J.LE.NVELL(K)) THEN
+                           ISFRONT = .TRUE.
+                        ELSE
+                           ISFRONT = .FALSE.
+                        ENDIF
+                        CALL COMPUTE_INTERNAL_BOUNDARY64_FLUX(I,J,K,
+     &                      TIMELOC,QN2(I),ISFRONT)
                     ENDDO
                 CASE DEFAULT
                     I = I + NVELL(K)
@@ -1489,8 +1482,9 @@ C
 
       USE GLOBAL, only: ch1, trans_lv_b, nodecode, noff, lumpt, dtdp,
      &    trans_lv_a, soursin, uu1, vv1, ifnlfa, eta1, bedstr, tk,
-     &    rhowat0, setmessagesource, unsetmessagesource, DEBUG,
+     &    setmessagesource, unsetmessagesource, DEBUG,
      &    allMessage
+      USE CONSTANTS, ONLY: rhowat0
       USE MESH, ONLY : NE, NP, NM, DP, X, Y, AREAS, SFAC
       USE NodalAttributes, ONLY: EVC
       use sizes, only: sz

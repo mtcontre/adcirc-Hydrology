@@ -10,7 +10,7 @@ C                     current for ADCIRC v46.34   09/20/2006
 C----------------------------------------------------------------------------
 
       MODULE PRE_GLOBAL
-      USE GLOBAL,ONLY: REarth,DEG2RAD,RAD2DEG
+      USE CONSTANTS,ONLY: REarth,DEG2RAD,RAD2DEG
       USE GLOBAL_3DVS, ONLY: NFEN
       USE PRESIZES
       USE VERSION
@@ -322,8 +322,11 @@ Casey 180318: Added NWS=13
       real(sz) :: dynamicWaterLevelCorrectionRampEnd = 0.d0   ! seconds after run start
       character(len=10) :: dynamicWaterLevelCorrectionRampReferenceTime = 'hotstart'
 
+<<<<<<< HEAD
+=======
       logical :: FOUND_LIM_NML = .false. ! for namelist
 C
+>>>>>>> Adding hydrology (precipitation and source nodes river connection) and variable Manning values as nodal attribute
 C     SOLVER  section
       INTEGER ITITER,ISLDIA,ITMAX
       REAL(SZ) CONVCR
