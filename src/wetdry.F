@@ -126,8 +126,8 @@ CWET...
       use global, only : noff, nodecode, nnodecode, eta1, eta2, tk,
      &    nolifa,
      &    bsx1, bsy1, btime_end, C2DDI, C3D, h0, ifnlfa, nddt, dtdp,
-     &    nibnodecode, ilump, ncchange, tkm, directvelWD, useHF
-     &    divbytotalarea, ncpsource  !cms v55 -- added for point source active check
+     &    nibnodecode, ilump, ncchange, tkm, directvelWD, useHF,
+     &    divbytotalarea, ncpsource !cms v55 -- added for point source active check
 #ifdef CMPI
      &    ,idumy,dumy1,dumy2
       use messenger

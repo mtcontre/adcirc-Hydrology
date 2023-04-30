@@ -64,9 +64,9 @@ C-----------------------------------------------------------------------
      &   alloc_main6, openfileforread, nhoutonce, IFSPROTS,
      &   StatPartWetFix, How2FixStatPartWet, cgwce_hdp, ifnl_hdp,
      &   CAliDisp, IFSFM, usingDynamicWaterLevelCorrection,slim,windlim,
-     &   directvelWD,useHF
-     &   NCRAIN, CRAIN_TIMINC, NCPSOURCE, CPS_TIMINC, CPS_RAMP, !kmd-v53 -- added for precipitation and point source
-     &   alloc_main15a, alloc_main15b !kmd-v53 -- added for precipitation and point source
+     &   directvelWD,useHF,
+     &   NCRAIN, CRAIN_TIMINC, NCPSOURCE, CPS_TIMINC, CPS_RAMP,
+     &   alloc_main15a, alloc_main15b  !kmd-v53 -- added for precipitation and point source
 #if defined CSWAN || defined ADCSWAN
      &   , SWAN_OutputHS, SWAN_OutputDIR,
      &    SWAN_OutputTM01, SWAN_OutputTPS, SWAN_OutputWIND,
@@ -737,6 +737,7 @@ C
 #else
 C     jgf46.10 Add user-controllable warning, output, and stop criteria
 C     for elevations.
+#warning The -DDEBUG_WARN_ELEV flag will be removed in a future release. Please begin using the &warnElevControl namelist to avoid future issues
       READ(15,*) NFOVER, WarnElev, iWarnElevDump, WarnElevDumpLimit,
      &  ErrorElev
 #endif

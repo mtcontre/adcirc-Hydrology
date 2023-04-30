@@ -364,7 +364,7 @@ C----------------------------------------------------------------------
      &   usingdynamicWaterLevelCorrection, dynamicWaterLevelCorrectionStaSpoolCounter,
      &   dynamicWaterLevelCorrectionFilePos, dynamicWaterLevelCorrectionSta,
      &   dynamicWaterLevelCorrectionStaFilePos,
-     &   ncrain, totalrain, totalrainapp, rain00, igrp, irainstp, ! kmd -v55 added for precipitation
+     &   ncrain, totalrain, totalrainapp, rain00, igrp, irainstp, !kmd -v55 added for precipitation
      &   nscour, nscougr
       USE CONSTANTS, ONLY: PRBCKGRND
 

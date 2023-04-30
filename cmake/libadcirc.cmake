@@ -42,6 +42,7 @@ set(LIBADC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/quadrature.F
     ${CMAKE_CURRENT_SOURCE_DIR}/src/couple2baroclinic3D.F)
 
+
 if(BUILD_LIBADCIRC_STATIC)
 
   add_library(libadcirc_static STATIC ${LIBADC_SOURCES})

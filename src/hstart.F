@@ -37,7 +37,7 @@ C
       USE GLOBAL
       USE CONSTANTS, ONLY: G, PI
       USE MESH, ONLY : DP, ICS, X, Y, NE, SLAM, SFEA, AID4, totalarea,
-     &    TotalAreaCalc
+     &    TotalAreaCalc ! kmd for precipitation
       USE BOUNDARIES, ONLY : NETA, NFLUXB, NFLUXF, NFLUXIB, NFLUXIBP,
      &    NOPE, NVEL, BndBCRiver, LBCODEI, NBV, BARLANHT, BARLANCFSP,
      &    IBCONN, BARINHT, BARINCFSP, BARINCFSB, PIPEHT, PIPECOEF,

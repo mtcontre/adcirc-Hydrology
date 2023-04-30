@@ -235,8 +235,9 @@ C
      &   VIDispDYOH, IFSFM, IFNL_HDP, CGWCE_HDP, CAliDisp, H0, ALPHAL, windlim,
      &   usingDynamicWaterLevelCorrection, dynamicWaterLevelCorrection1,
      &   COEFDTemp, COEFDTempMem  ! Added for VED1D  08-11-2022 SB
-     &   RainfallCurr, RainODT, totalrain, PSCurr, PSODT,
-     &   NCRAIN, NCPSOURCE, CPS_RAMP ! kmd-v53 -- added for precipitation and point source terms
+     &   RainfallCurr, RainODT, totalrain, PSCurr, PSODT, ! kmd-v53 -- added for precipitation and point source terms
+     &   NCRAIN, NCPSOURCE, CPS_RAMP
+
 #ifdef CMPI
      &    , dumy1, dumy2, rnp_global
 #endif

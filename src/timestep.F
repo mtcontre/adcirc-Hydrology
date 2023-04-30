@@ -64,14 +64,11 @@ C
      &    BCFLAG_LNM, usingDynamicWaterLevelCorrection,
      &    dynamicWaterLevelCorrection1, dynamicWaterLevelCorrection2, L_N, TKM,
      &    WarnElevDump, nodes_lg, NT, NM, NB, DEBUG, NHOUTONCE,
-C  kmd v53 -- added for precipitation and point source forcing
-     &    NCRAIN,CRAIN_TIMINC,CRAIN_TIME1,CRAIN_TIME2,RAIN1,RAIN2,
+     &    NCRAIN,CRAIN_TIMINC,CRAIN_TIME1,CRAIN_TIME2,RAIN1,RAIN2, !kmd v53 -- added for precipitation and point source forcing
      &    RainfallCurr,RainfallOld,RainODT,totalrain,totalrainapp,
      &    NCPSOURCE,CPS_TIMINC,CPS_TIME1,CPS_TIME2,PS1,PS2,PSCurr,PSOld,
      &    PSODT,CPS_RAMP,DivByTotalArea,nearNode,dt
-#ifdef CSWAN
-     &  , waveWindMultiplier
-#endif
+      USE CONSTANTS, ONLY: rhoWat0, sigT0, waveWindMultiplier
       USE GWCE, ONLY : solveGWCE, numitr
       USE MOMENTUM, ONLY : solveMomentumEq
       USE WETDRY, ONLY : computeWettingAndDrying
@@ -1833,8 +1830,9 @@ c******************************************************************************
       SUBROUTINE BPG2D(IT,TimeLoc)
 
       USE SIZES, ONLY : SZ, myproc
-      USE GLOBAL, ONLY: G, IFNLFA, IFNLCT, IDEN, RAMP, NODECODE, NOFF,
-     &    VIDBCPDXOH, VIDBCPDYOH, ETA2, SigT0, DTDP, DASigT, RhoWat0,
+      USE CONSTANTS, ONLY: G, RhoWat0, SigT0
+      USE GLOBAL, ONLY: IFNLFA, IFNLCT, IDEN, RAMP, NODECODE, NOFF,
+     &    VIDBCPDXOH, VIDBCPDYOH, ETA2, DTDP, DASigT,
      &    IFSFM
       USE MESH, ONLY : NE, NM, FDXE, FDYE, NP, DP, AREAS, NODELE,
      &      NEITABELE, NEITAB, NNEIGH, TOTALAREA,
@@ -1998,7 +1996,8 @@ C
      &      NODECODE, NOFF, VIDBCPDXOH, VIDBCPDYOH,
      &      setMessageSource, unsetMessageSource, allMessage,
      &      logMessage, DEBUG, ECHO, INFO, WARNING, ERROR,
-     &      ETA2, SIGT0, H0, DTDP
+     &      ETA2, H0, DTDP
+      USE CONSTANTS, ONLY: SigT0
       USE MESH, ONLY : NM, X, Y, NP, DP, AREAS, NODELE,
      &      NEITABELE, NEITAB, NNEIGH, SFAC
       USE GLOBAL_3DVS, ONLY : BCP, BPG, NFEN, SIGT, SIGMA, IDEN,
